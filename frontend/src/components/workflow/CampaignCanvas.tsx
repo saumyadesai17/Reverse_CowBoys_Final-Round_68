@@ -168,6 +168,10 @@ export function CampaignCanvas() {
     setSelectedNodeId(node.id);
   }, [setSelectedNodeId]);
 
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+  }, [setSelectedNodeId]);
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -320,6 +324,7 @@ export function CampaignCanvas() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
           onConnectStart={onConnectStart}
           onConnectEnd={onConnectEnd}
           onInit={setReactFlowInstance}

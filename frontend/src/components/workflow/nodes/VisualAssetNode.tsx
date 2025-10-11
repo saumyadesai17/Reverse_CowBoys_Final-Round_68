@@ -4,7 +4,7 @@ import React, { memo, useState } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Play, Pause } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,11 +39,6 @@ export const VisualAssetNode = memo(({ id, data }: VisualAssetNodeProps) => {
     const newInputs = { ...inputs, [key]: value };
     setInputs(newInputs);
     updateModule(id, { ...data.module, inputs: newInputs });
-  };
-
-  const handleExecute = () => {
-    // Here you would call the actual API
-    console.log("Executing visual asset generation with inputs:", inputs);
   };
 
   return (
@@ -184,20 +179,6 @@ export const VisualAssetNode = memo(({ id, data }: VisualAssetNodeProps) => {
             </div>
           </div>
         )}
-
-        <div className="flex justify-center pt-2">
-          <Button
-            onClick={handleExecute}
-            size="sm"
-            className="w-20 h-8 rounded-full"
-          >
-            {data.isActive ? (
-              <><Play className="w-3 h-3 mr-1" /> Execute</>
-            ) : (
-              <><Pause className="w-3 h-3 mr-1" /> Paused</>
-            )}
-          </Button>
-        </div>
       </CardContent>
 
         {/* Output Handles */}
