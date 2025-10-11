@@ -25,7 +25,7 @@ from agno.models.google import Gemini
 from agno.tools.exa import ExaTools
 from agno.tools.firecrawl import FirecrawlTools
 from dotenv import load_dotenv
-from nano import visual_asset_manager
+from image import visual_asset_manager
 from audience_intelligence_analyzer import (
     AudienceIntelligenceRequest, 
     AudienceIntelligenceResponse,
@@ -1302,42 +1302,53 @@ async def generate_visual_assets(request: VisualAssetRequest):
             negative_text = ", ".join(request.negative_prompts)
             enhanced_prompt += f", avoid {negative_text}"
         
-        # Determine image type based on style
-        image_type = "realistic"
+        # Determine image style based on request
+        image_style = "photorealistic"
         if request.image_style:
             if "illustration" in request.image_style:
-                image_type = "cartoonish"
+                image_style = "illustration"
             elif "minimal" in request.image_style:
-                image_type = "minimal"
+                image_style = "minimal"
+            elif "abstract" in request.image_style:
+                image_style = "abstract"
         
-        # Prepare dimensions for the visual_asset_manager
-        dimensions = {
-            "width": request.dimensions.width,
-            "height": request.dimensions.height
+        # Prepare arguments for the visual_asset_manager
+        args = {
+            "prompt": enhanced_prompt,
+            "quantity": request.quantity,
+            "dimensions": {
+                "width": request.dimensions.width,
+                "height": request.dimensions.height
+            },
+            "image_style": image_style
         }
         
-        # Generate images using the nano.py service
-        image_urls = visual_asset_manager(
-            prompt=enhanced_prompt,
-            quantity=request.quantity,
-            image_types=image_type,
-            dimension=dimensions
-        )
+        # Generate images using the image.py service
+        result = visual_asset_manager(args)
+        
+        # Check for errors
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=f"Image generation error: {result['error']}")
+        
+        image_urls = result.get("image_urls", [])
         
         # Process results and create response
         generated_images = []
         successful_images = 0
         failed_images = 0
         
-        for i, result in enumerate(image_urls):
-            if isinstance(result, str):  # Successful generation
+        for i, image_url in enumerate(image_urls):
+            if isinstance(image_url, str):  # Successful generation
                 image_response = GeneratedImageResponse(
-                    image_url=result,
+                    image_url=image_url,
                     image_id=f"img_{int(time.time())}_{i}",
                     metadata={
                         "prompt": enhanced_prompt,
-                        "style": image_type,
-                        "dimensions": dimensions,
+                        "style": image_style,
+                        "dimensions": {
+                            "width": request.dimensions.width,
+                            "height": request.dimensions.height
+                        },
                         "generation_index": i
                     }
                 )
