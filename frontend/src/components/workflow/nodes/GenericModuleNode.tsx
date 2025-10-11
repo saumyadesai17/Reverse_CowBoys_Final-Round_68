@@ -4,13 +4,15 @@ import React, { memo, useState } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Play, Pause } from "lucide-react";
+import { Settings, Play, Pause, Eye, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { MODULE_DEFINITIONS } from "@/lib/moduleDefinitions";
+import { WorkflowExecutionService, ExecutionResult } from "@/lib/workflowExecution";
+import { OutputViewer } from "@/components/workflow/OutputViewer";
 
 interface GenericModuleNodeProps extends NodeProps {
   data: {
@@ -18,6 +20,8 @@ interface GenericModuleNodeProps extends NodeProps {
     isActive: boolean;
     module_name: string;
     inputs: Record<string, any>;
+    executionStatus?: 'idle' | 'running' | 'success' | 'error';
+    executionResult?: ExecutionResult;
   };
 }
 
@@ -61,9 +65,11 @@ const getSafeValue = (value: any, inputType: string): string => {
 };
 
 export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => {
-  const { selectedNodeId, updateModule, connectionPreview } = useCampaignStore();
+  const { selectedNodeId, updateModule, connectionPreview, executionResults, setExecutionResult } = useCampaignStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputs, setInputs] = useState(data.inputs || {});
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [showOutputViewer, setShowOutputViewer] = useState(false);
 
   const moduleDefinition = MODULE_DEFINITIONS[data.module_name as keyof typeof MODULE_DEFINITIONS];
   const isSelected = selectedNodeId === id;
@@ -83,6 +89,44 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
     setInputs(newInputs);
     updateModule(id, { ...data, inputs: newInputs });
   };
+
+  // Get execution result from store
+  const executionResult = executionResults[id];
+  const executionStatus = isExecuting ? 'running' : executionResult?.execution_status;
+
+  const handleExecute = async () => {
+    if (isExecuting) return;
+    
+    setIsExecuting(true);
+    try {
+      const result = await WorkflowExecutionService.executeModule(data.module_name, inputs);
+      setExecutionResult(id, result);
+    } catch (error) {
+      console.error('Execution failed:', error);
+      setExecutionResult(id, {
+        outputs: {},
+        execution_status: 'error',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const getExecutionStatusIcon = () => {
+    switch (executionStatus) {
+      case 'running':
+        return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />;
+      case 'success':
+        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+      case 'error':
+        return <XCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const hasOutput = executionResult && executionResult.execution_status === 'success' && executionResult.outputs;
 
   const renderInputField = (inputKey: string, inputDef: any) => {
     let value = inputs[inputKey];
@@ -276,13 +320,35 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                 {data.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {/* Execution Status Indicator */}
+              {getExecutionStatusIcon()}
+              
+              {/* Execute Button */}
+              {WorkflowExecutionService.isModuleExecutable(data.module_name) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleExecute}
+                  disabled={isExecuting}
+                  title={isExecuting ? "Executing..." : "Execute Module"}
+                >
+                  {isExecuting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Play className="w-4 h-4" />
+                  )}
+                </Button>
+              )}
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           <div>
             <h3 className="font-medium text-sm">{moduleDefinition.display_name}</h3>
@@ -299,6 +365,20 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             >
               {moduleDefinition.category}
             </Badge>
+            
+            {/* Output View Button - Bottom Right */}
+            {hasOutput && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowOutputViewer(true)}
+                className="ml-auto bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                title="View Generated Output"
+              >
+                <Eye className="w-3 h-3 mr-1" />
+                Output
+              </Button>
+            )}
           </div>
 
           {isExpanded && (
@@ -390,6 +470,15 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             );
           })}
         </>
+      )}
+      
+      {/* Output Viewer Modal */}
+      {showOutputViewer && executionResult && (
+        <OutputViewer
+          moduleName={data.module_name}
+          result={executionResult}
+          onClose={() => setShowOutputViewer(false)}
+        />
       )}
     </div>
   );

@@ -9,7 +9,6 @@ import {
   clearStoredCampaignResponse 
 } from "@/lib/backendWorkflowGenerator";
 import { generateWorkflowFromBrief } from "@/lib/workflowGenerator";
-import { testNodeSpacing } from "@/lib/nodeSpacingTest";
 
 export default function CanvasPage() {
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -26,11 +25,6 @@ export default function CanvasPage() {
       setNodes(generatedNodes);
       setEdges(generatedEdges);
       
-      // Test node spacing in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log("🔍 Testing node spacing for generated workflow...");
-        testNodeSpacing();
-      }
       
       // Clear stored response
       clearStoredCampaignResponse();
