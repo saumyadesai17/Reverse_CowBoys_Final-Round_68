@@ -32,6 +32,11 @@ from audience_intelligence_analyzer import (
     analyze_audience_intelligence
 )
 from copy_content_generator import generate_social_content
+from campaign_timeline_optimizer import (
+    CampaignTimelineRequest,
+    CampaignTimelineResponse,
+    optimize_campaign_timeline
+)
 
 # Load environment variables
 load_dotenv()
@@ -1566,6 +1571,37 @@ def calculate_seo_metadata(copies: List[GeneratedCopyResponse], keywords: Option
         keyword_density=keyword_density,
         readability_score=round(readability_score, 1)
     )
+
+@app.post("/campaign_timeline_optimizer", response_model=CampaignTimelineResponse)
+async def optimize_timeline(request: CampaignTimelineRequest):
+    """
+    Optimize campaign timeline using AI-powered scheduling
+    
+    This endpoint creates strategic campaign timelines including:
+    - Real-time date analysis and event detection
+    - Audience behavior pattern analysis
+    - Platform-specific optimal posting times
+    - Content distribution scheduling
+    - Budget-aware timeline optimization
+    - Engagement maximization strategies
+    
+    Uses LLM-powered analysis with web search capabilities.
+    """
+    try:
+        print(f"📅 Optimizing campaign timeline from {request.campaign_duration.start_date} to {request.campaign_duration.end_date}")
+        print(f"🎯 Audience segments: {request.audience_segments}")
+        print(f"📱 Content inventory: {len(request.content_inventory)} items")
+        
+        # Call the campaign timeline optimizer
+        result = optimize_campaign_timeline(request)
+        
+        print(f"✅ Timeline optimization completed with status: {result.execution_status}")
+        print(f"📊 Generated {len(result.outputs.get('optimized_timeline', []))} timeline slots")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error optimizing campaign timeline: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
