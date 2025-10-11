@@ -309,28 +309,32 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
       {/* Handle Labels */}
       {(isSelected || isConnectionTarget) && (
         <>
+          {/* Input Labels - Left side, right-aligned with gap from dot */}
           {inputKeys.map((key, index) => {
             const isCompatible = compatibleHandles.includes(key);
             return (
               <div 
                 key={key} 
-                className={`absolute left-[-120px] text-xs text-gray-600 px-2 py-1 rounded shadow border text-right transition-all duration-200 ${
+                className={`absolute text-xs text-gray-600 px-2 py-1 rounded shadow border text-right transition-all duration-200 whitespace-nowrap ${
                   isCompatible ? 'bg-green-100 border-green-400 text-green-800 font-semibold animate-pulse' : 'bg-white'
                 }`}
                 style={{ 
                   top: `${startPosition + (index * handleSpacing) - 12}px`,
+                  right: 'calc(100% + 12px)', // 12px gap from the card edge (dot is 8px from edge)
                 }}
               >
                 {key.replace(/_/g, " ")}
               </div>
             );
           })}
+          {/* Output Labels - Right side, left-aligned with gap from dot */}
           {outputKeys.map((key, index) => (
             <div 
               key={key} 
-              className="absolute right-[-120px] text-xs text-gray-600 bg-white px-2 py-1 rounded shadow border"
+              className="absolute text-xs text-gray-600 bg-white px-2 py-1 rounded shadow border text-left transition-all duration-200 whitespace-nowrap"
               style={{ 
                 top: `${startPosition + (index * handleSpacing) - 12}px`,
+                left: 'calc(100% + 12px)', // 12px gap from the card edge (dot is 8px from edge)
               }}
             >
               {key.replace(/_/g, " ")}
