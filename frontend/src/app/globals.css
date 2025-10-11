@@ -144,3 +144,33 @@
 .react-flow__node:focus {
   outline: none !important;
 }
+
+/* React Flow Edge Styling - Better selection visibility */
+.react-flow__edge-path {
+  stroke: #94a3b8 !important;
+  stroke-width: 2 !important;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #ff0000 !important; /* Blue when selected */
+  stroke-width: 3 !important;
+  stroke-dasharray: none !important; /* Solid line when selected */
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #ff0000 !important;
+  stroke-width: 3 !important;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5, 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+

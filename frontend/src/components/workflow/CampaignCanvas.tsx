@@ -102,6 +102,16 @@ const initialNodes: Node[] = [
 
 const initialEdges: Edge[] = [];
 
+// Default edge options for better interaction and visual feedback
+const defaultEdgeOptions = {
+  animated: false, // Disable animation for clearer visual state
+  style: { 
+    stroke: '#94a3b8', 
+    strokeWidth: 2,
+  },
+  type: 'smoothstep',
+};
+
 export function CampaignCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -335,6 +345,9 @@ export function CampaignCanvas() {
             onDrop={onDrop}
             nodeTypes={nodeTypes}
             connectionMode={ConnectionMode.Strict}
+            defaultEdgeOptions={defaultEdgeOptions}
+            elementsSelectable={true}
+            deleteKeyCode="Delete"
             fitView
             className="bg-gray-50 h-full w-full"
             attributionPosition="bottom-left"
