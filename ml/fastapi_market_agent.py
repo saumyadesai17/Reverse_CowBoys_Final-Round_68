@@ -37,6 +37,16 @@ from campaign_timeline_optimizer import (
     CampaignTimelineResponse,
     optimize_campaign_timeline
 )
+from content_distribution_scheduler import (
+    ContentDistributionRequest,
+    ContentDistributionResponse,
+    schedule_content_distribution
+)
+from outreach_call_scheduler import (
+    OutreachCallRequest,
+    OutreachCallResponse,
+    schedule_outreach_calls
+)
 
 # Load environment variables
 load_dotenv()
@@ -1602,6 +1612,74 @@ async def optimize_timeline(request: CampaignTimelineRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error optimizing campaign timeline: {str(e)}")
+
+@app.post("/content_distribution_scheduler", response_model=ContentDistributionResponse)
+async def schedule_content_distribution_endpoint(request: ContentDistributionRequest):
+    """
+    Schedule content distribution with detailed posting plans
+    
+    This endpoint creates detailed posting schedules including:
+    - Specific content assignments to timeline slots
+    - Platform-optimized copy text and assets
+    - Detailed posting parameters (hashtags, mentions, location tags)
+    - Platform compliance checking
+    - Execution notes and optimization recommendations
+    - Comprehensive schedule summaries
+    
+    Takes optimized timeline from campaign_timeline_optimizer and content assets
+    from copy_content_generator and visual_asset_generator to create actionable
+    posting schedules.
+    """
+    try:
+        print(f"📅 Scheduling content distribution for {len(request.optimized_timeline)} timeline slots")
+        print(f"📝 Available copies: {len(request.generated_copies)}")
+        print(f"🖼️ Available images: {len(request.generated_images) if request.generated_images else 0}")
+        print(f"📱 Platform: {request.platform_specifications.platform_name}")
+        
+        # Call the content distribution scheduler
+        result = schedule_content_distribution(request)
+        
+        print(f"✅ Content distribution scheduling completed with status: {result.execution_status}")
+        print(f"📊 Generated {len(result.outputs.get('distribution_schedule', []))} schedule items")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error scheduling content distribution: {str(e)}")
+
+@app.post("/outreach_call_scheduler", response_model=OutreachCallResponse)
+async def schedule_outreach_calls_endpoint(request: OutreachCallRequest):
+    """
+    Schedule outreach calls with detailed call plans
+    
+    This endpoint creates detailed call schedules including:
+    - Lead prioritization based on qualification scores and segments
+    - Timezone-aware scheduling with optimal calling times
+    - Specific call objectives tailored to each lead
+    - Expected call durations and priority levels
+    - Call preparation notes and talking points
+    - Follow-up plans and success metrics
+    - Comprehensive schedule summaries
+    
+    Takes discovered leads and creates actionable call schedules
+    for sales and outreach campaigns.
+    """
+    try:
+        print(f"📞 Scheduling outreach calls for {len(request.discovered_leads)} leads")
+        print(f"📅 Campaign duration: {request.campaign_duration.start_date} to {request.campaign_duration.end_date}")
+        print(f"📊 Calls per day: {request.calls_per_day}")
+        print(f"🌍 Timezone: {request.call_window_preferences.timezone}")
+        
+        # Call the outreach call scheduler
+        result = schedule_outreach_calls(request)
+        
+        print(f"✅ Outreach call scheduling completed with status: {result.execution_status}")
+        print(f"📞 Generated {len(result.outputs.get('call_schedule', []))} call schedule items")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error scheduling outreach calls: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

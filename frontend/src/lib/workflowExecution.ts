@@ -110,11 +110,31 @@ export class WorkflowExecutionService {
         };
         
       case 'audience_intelligence_analyzer':
+        // Ensure interests is always an array
+        const ensureInterestsArray = (interests: any): string[] => {
+          if (!interests) return ["technology", "lifestyle"];
+          if (Array.isArray(interests)) return interests;
+          if (typeof interests === 'string') return [interests];
+          return ["technology", "lifestyle"];
+        };
+        
+        // Ensure behavior_patterns is always an array
+        const ensureBehaviorPatternsArray = (patterns: any): string[] => {
+          if (!patterns) return ["social media active"];
+          if (Array.isArray(patterns)) return patterns;
+          if (typeof patterns === 'string') return [patterns];
+          return ["social media active"];
+        };
+        
         return {
           product_category: inputs.product_category || 'general',
           geographic_location: inputs.geographic_location || 'global',
           campaign_objective: inputs.campaign_objective || 'brand awareness',
-          existing_customer_data: inputs.existing_customer_data || {
+          existing_customer_data: inputs.existing_customer_data ? {
+            age_range: inputs.existing_customer_data.age_range || "18-65",
+            interests: ensureInterestsArray(inputs.existing_customer_data.interests),
+            behavior_patterns: ensureBehaviorPatternsArray(inputs.existing_customer_data.behavior_patterns)
+          } : {
             age_range: "18-65",
             interests: ["technology", "lifestyle"],
             behavior_patterns: ["social media active"]
