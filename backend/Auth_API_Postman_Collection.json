@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "auth-api-collection",
-		"name": "Auth API Collection",
-		"description": "Complete authentication API collection for testing signup, login, profile, and token verification endpoints",
+		"name": "FastAPI Auth Collection",
+		"description": "Complete FastAPI authentication API collection with automatic documentation at /docs",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -21,6 +21,42 @@
 					]
 				},
 				"description": "Check if the API is running"
+			},
+			"response": []
+		},
+		{
+			"name": "API Documentation",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/docs",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"docs"
+					]
+				},
+				"description": "Access FastAPI automatic interactive documentation"
+			},
+			"response": []
+		},
+		{
+			"name": "OpenAPI Schema",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/openapi.json",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"openapi.json"
+					]
+				},
+				"description": "Get OpenAPI schema in JSON format"
 			},
 			"response": []
 		},
