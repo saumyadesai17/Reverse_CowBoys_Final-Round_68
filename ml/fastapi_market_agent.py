@@ -25,6 +25,12 @@ from agno.models.google import Gemini
 from agno.tools.exa import ExaTools
 from agno.tools.firecrawl import FirecrawlTools
 from dotenv import load_dotenv
+from nano import visual_asset_manager
+from audience_intelligence_analyzer import (
+    AudienceIntelligenceRequest, 
+    AudienceIntelligenceResponse,
+    analyze_audience_intelligence
+)
 
 # Load environment variables
 load_dotenv()
@@ -422,6 +428,30 @@ class CampaignResponse(BaseModel):
     module_configurations: Optional[ModuleConfigurations] = Field(None, description="Prefilled module configurations")
     module_connections: Optional[List[ModuleConnections]] = Field(None, description="Module connections and data flow")
     timestamp: datetime = Field(default_factory=datetime.now)
+
+# Visual Asset Generator Models
+class VisualAssetRequest(BaseModel):
+    prompt: str = Field(..., description="Image generation prompt")
+    brand_guidelines: Optional[BrandGuidelines] = Field(None, description="Brand guidelines")
+    quantity: int = Field(1, description="Number of images to generate")
+    dimensions: Dimensions = Field(default_factory=lambda: Dimensions(width=512, height=512), description="Image dimensions")
+    image_style: Optional[List[str]] = Field(["photorealistic"], description="Image style options")
+    negative_prompts: Optional[List[str]] = Field(None, description="Negative prompts")
+
+class GeneratedImageResponse(BaseModel):
+    image_url: str = Field(..., description="Generated image URL")
+    image_id: str = Field(..., description="Unique image ID")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Image metadata")
+
+class GenerationMetadata(BaseModel):
+    model_used: str = Field("pollinations-ai", description="Model used for generation")
+    generation_time: datetime = Field(default_factory=datetime.now, description="Generation timestamp")
+    prompt_tokens: Optional[int] = Field(None, description="Number of prompt tokens")
+
+class VisualAssetResponse(BaseModel):
+    outputs: Dict[str, Any] = Field(..., description="Generated outputs")
+    generation_metadata: GenerationMetadata = Field(..., description="Generation metadata")
+    execution_status: str = Field(..., description="Execution status")
 
 # FastAPI App Setup
 @asynccontextmanager
@@ -1241,6 +1271,135 @@ async def get_module_connections_endpoint():
         "module_connections": connections,
         "description": "Predefined workflow connections between content generation modules"
     }
+
+@app.post("/visual_asset_generator", response_model=VisualAssetResponse)
+async def generate_visual_assets(request: VisualAssetRequest):
+    """
+    Generate visual assets using Pollinations AI
+    
+    This endpoint generates images based on:
+    - Prompt description
+    - Brand guidelines (colors, style, logo)
+    - Quantity of images needed
+    - Dimensions (width, height)
+    - Image style preferences
+    - Negative prompts to avoid
+    """
+    try:
+        # Enhance prompt with brand guidelines if provided
+        enhanced_prompt = request.prompt
+        
+        if request.brand_guidelines:
+            if request.brand_guidelines.colors:
+                color_text = ", ".join(request.brand_guidelines.colors)
+                enhanced_prompt += f", {color_text} color scheme"
+            
+            if request.brand_guidelines.style:
+                enhanced_prompt += f", {request.brand_guidelines.style} style"
+        
+        # Add negative prompts if provided
+        if request.negative_prompts:
+            negative_text = ", ".join(request.negative_prompts)
+            enhanced_prompt += f", avoid {negative_text}"
+        
+        # Determine image type based on style
+        image_type = "realistic"
+        if request.image_style:
+            if "illustration" in request.image_style:
+                image_type = "cartoonish"
+            elif "minimal" in request.image_style:
+                image_type = "minimal"
+        
+        # Prepare dimensions for the visual_asset_manager
+        dimensions = {
+            "width": request.dimensions.width,
+            "height": request.dimensions.height
+        }
+        
+        # Generate images using the nano.py service
+        image_urls = visual_asset_manager(
+            prompt=enhanced_prompt,
+            quantity=request.quantity,
+            image_types=image_type,
+            dimension=dimensions
+        )
+        
+        # Process results and create response
+        generated_images = []
+        successful_images = 0
+        failed_images = 0
+        
+        for i, result in enumerate(image_urls):
+            if isinstance(result, str):  # Successful generation
+                image_response = GeneratedImageResponse(
+                    image_url=result,
+                    image_id=f"img_{int(time.time())}_{i}",
+                    metadata={
+                        "prompt": enhanced_prompt,
+                        "style": image_type,
+                        "dimensions": dimensions,
+                        "generation_index": i
+                    }
+                )
+                generated_images.append(image_response)
+                successful_images += 1
+            else:  # Error case
+                failed_images += 1
+        
+        # Determine execution status
+        if successful_images == request.quantity:
+            execution_status = "success"
+        elif successful_images > 0:
+            execution_status = "partial_success"
+        else:
+            execution_status = "failed"
+        
+        # Create response
+        response = VisualAssetResponse(
+            outputs={
+                "generated_images": generated_images
+            },
+            generation_metadata=GenerationMetadata(
+                model_used="pollinations-ai",
+                generation_time=datetime.now(),
+                prompt_tokens=len(enhanced_prompt.split())
+            ),
+            execution_status=execution_status
+        )
+        
+        return response
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating visual assets: {str(e)}")
+
+@app.post("/audience_intelligence_analyzer", response_model=AudienceIntelligenceResponse)
+async def analyze_audience(request: AudienceIntelligenceRequest):
+    """
+    Analyze audience intelligence and generate comprehensive insights
+    
+    This endpoint performs deep audience analysis including:
+    - Audience segmentation with demographics and psychographics
+    - Detailed persona profiles
+    - Platform recommendations
+    - Optimal posting times
+    - Content preferences
+    
+    Uses LLM-powered analysis with real-time research capabilities.
+    """
+    try:
+        print(f"🎯 Analyzing audience intelligence for {request.product_category} in {request.geographic_location.city or request.geographic_location.country}")
+        
+        # Call the audience intelligence analyzer
+        result = analyze_audience_intelligence(request)
+        
+        print(f"✅ Analysis completed with status: {result.execution_status}")
+        print(f"📊 Generated {len(result.outputs.get('audience_segments', []))} audience segments")
+        print(f"👥 Created {len(result.outputs.get('persona_profiles', []))} persona profiles")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error analyzing audience intelligence: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
