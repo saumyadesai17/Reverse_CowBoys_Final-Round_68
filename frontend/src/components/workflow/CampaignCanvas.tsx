@@ -21,6 +21,7 @@ import { OutputNode } from "./nodes/OutputNode";
 import { InputNode } from "./nodes/InputNode";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { Sidebar } from "./Sidebar";
+import { CampaignCalendar } from "./CampaignCalendar";
 import { MODULE_DEFINITIONS, CONNECTION_MATRIX } from "@/lib/moduleDefinitions";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -107,6 +108,7 @@ export function CampaignCanvas() {
   const [reactFlowInstance, setReactFlowInstance] = React.useState<any>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isMinimapCollapsed, setIsMinimapCollapsed] = React.useState(false);
+  const [showCalendar, setShowCalendar] = React.useState(false);
   const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview } = useCampaignStore();
 
   const onConnect = useCallback(
@@ -315,69 +317,89 @@ export function CampaignCanvas() {
   }, [reactFlowInstance, setNodes]);
 
   return (
-    <div className="h-screen w-full flex overflow-hidden">
-      <div className="flex-1 relative h-full">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          onConnectStart={onConnectStart}
-          onConnectEnd={onConnectEnd}
-          onInit={setReactFlowInstance}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-          nodeTypes={nodeTypes}
-          connectionMode={ConnectionMode.Strict}
-          fitView
-          className="bg-gray-50 h-full w-full"
-          attributionPosition="bottom-left"
-        >
-          <Background />
-          <Controls />
-          {!isMinimapCollapsed && (
-            <MiniMap
-              className="!bg-white"
-              nodeColor={(node) => {
-                switch (node.type) {
-                  case "input":
-                    return "#3b82f6";
-                  case "module":
-                    if (node.data.module_name && MODULE_DEFINITIONS[node.data.module_name as keyof typeof MODULE_DEFINITIONS]) {
-                      return MODULE_DEFINITIONS[node.data.module_name as keyof typeof MODULE_DEFINITIONS].color;
-                    }
-                    return "#6b7280"; 
-                  case "output":
-                    return "#f59e0b";
-                  default:
-                    return "#6b7280";
-                }
-              }}
-            />
-          )}
-        </ReactFlow>
-        
-        {/* Minimap Toggle Button */}
-        <button
-          onClick={() => setIsMinimapCollapsed(!isMinimapCollapsed)}
-          className="absolute bottom-4 right-4 bg-white border border-gray-300 rounded-md p-2 text-xs shadow-sm hover:bg-gray-50 z-10 flex items-center justify-center"
-          title={isMinimapCollapsed ? 'Show Minimap' : 'Hide Minimap'}
-        >
-          {isMinimapCollapsed ? (
-            <Eye className="w-4 h-4" />
-          ) : (
-            <EyeOff className="w-4 h-4" />
-          )}
-        </button>
+    <>
+      <div className="h-screen w-full flex overflow-hidden">
+        <div className="flex-1 relative h-full">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
+            onConnectStart={onConnectStart}
+            onConnectEnd={onConnectEnd}
+            onInit={setReactFlowInstance}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+            nodeTypes={nodeTypes}
+            connectionMode={ConnectionMode.Strict}
+            fitView
+            className="bg-gray-50 h-full w-full"
+            attributionPosition="bottom-left"
+          >
+            <Background />
+            <Controls />
+            {!isMinimapCollapsed && (
+              <MiniMap
+                className="!bg-white"
+                nodeColor={(node) => {
+                  switch (node.type) {
+                    case "input":
+                      return "#3b82f6";
+                    case "module":
+                      if (node.data.module_name && MODULE_DEFINITIONS[node.data.module_name as keyof typeof MODULE_DEFINITIONS]) {
+                        return MODULE_DEFINITIONS[node.data.module_name as keyof typeof MODULE_DEFINITIONS].color;
+                      }
+                      return "#6b7280"; 
+                    case "output":
+                      return "#f59e0b";
+                    default:
+                      return "#6b7280";
+                  }
+                }}
+              />
+            )}
+          </ReactFlow>
+          
+          {/* Minimap Toggle Button */}
+          <button
+            onClick={() => setIsMinimapCollapsed(!isMinimapCollapsed)}
+            className="absolute bottom-4 right-4 bg-white border border-gray-300 rounded-md p-2 text-xs shadow-sm hover:bg-gray-50 z-10 flex items-center justify-center"
+            title={isMinimapCollapsed ? 'Show Minimap' : 'Hide Minimap'}
+          >
+            {isMinimapCollapsed ? (
+              <Eye className="w-4 h-4" />
+            ) : (
+              <EyeOff className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+        <Sidebar 
+          onAddModule={handleAddModule}
+          onRunCampaign={() => setShowCalendar(true)}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
       </div>
-      <Sidebar 
-        onAddModule={handleAddModule}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-      />
-    </div>
+
+      {/* Calendar Modal */}
+      {showCalendar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-[95vw] h-[95vh] relative">
+            <button
+              onClick={() => setShowCalendar(false)}
+              className="absolute top-4 right-4 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <CampaignCalendar />
+          </div>
+        </div>
+      )}
+    </>
   );
 }

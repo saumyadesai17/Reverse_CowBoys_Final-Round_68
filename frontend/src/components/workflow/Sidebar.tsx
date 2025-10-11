@@ -54,11 +54,12 @@ const categories = ["All", ...Object.keys(MODULE_CATEGORIES)];
 
 interface SidebarProps {
   onAddModule?: (moduleId: string) => void;
+  onRunCampaign?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }
 
-export function Sidebar({ onAddModule, isCollapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ onAddModule, onRunCampaign, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const [selectedCategory, setSelectedCategory] = React.useState("All");
   const [isRunning, setIsRunning] = React.useState(false);
 
@@ -68,8 +69,11 @@ export function Sidebar({ onAddModule, isCollapsed = false, onToggleCollapse }: 
 
   const handleRunWorkflow = () => {
     setIsRunning(true);
-    // Simulate workflow execution
-    setTimeout(() => setIsRunning(false), 3000);
+    // Simulate workflow execution and then show calendar
+    setTimeout(() => {
+      setIsRunning(false);
+      onRunCampaign?.();
+    }, 2000);
   };
 
   const handleAddToCanvas = (moduleId: string) => {
