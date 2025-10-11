@@ -327,7 +327,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                 {data.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center ml-3 gap-1">
               {/* Execution Status Indicator */}
               {getExecutionStatusIcon()}
               
