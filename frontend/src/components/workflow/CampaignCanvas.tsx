@@ -23,7 +23,9 @@ import { useCampaignStore } from "@/stores/campaignStore";
 import { Sidebar } from "./Sidebar";
 import { CampaignCalendar } from "./CampaignCalendar";
 import { MODULE_DEFINITIONS, CONNECTION_MATRIX } from "@/lib/moduleDefinitions";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Play, Square } from "lucide-react";
+import { WorkflowExecutionService } from "@/lib/workflowExecution";
+import { getStoredCampaignResponse } from "@/lib/backendWorkflowGenerator";
 
 const nodeTypes = {
   module: GenericModuleNode,
@@ -53,7 +55,9 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isMinimapCollapsed, setIsMinimapCollapsed] = React.useState(false);
   const [showCalendar, setShowCalendar] = React.useState(false);
-  const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview } = useCampaignStore();
+  const [isExecutingWorkflow, setIsExecutingWorkflow] = React.useState(false);
+  const [executionProgress, setExecutionProgress] = React.useState<{completed: number, total: number}>({completed: 0, total: 0});
+  const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview, setExecutionResult } = useCampaignStore();
 
   // Update nodes and edges when props change
   useEffect(() => {
@@ -272,6 +276,51 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
 
     setNodes((nds) => nds.concat(newNode));
   }, [reactFlowInstance, setNodes]);
+
+  const handleRunWorkflow = useCallback(async () => {
+    if (isExecutingWorkflow) {
+      // TODO: Add ability to cancel workflow execution
+      setIsExecutingWorkflow(false);
+      return;
+    }
+
+    setIsExecutingWorkflow(true);
+    setExecutionProgress({ completed: 0, total: nodes.length });
+
+    try {
+      // Get module connections from stored campaign response
+      const campaignResponse = getStoredCampaignResponse();
+      const connections = campaignResponse?.module_connections || [];
+
+      // Execute workflow
+      const results = await WorkflowExecutionService.executeWorkflow(
+        nodes.map(node => ({
+          id: node.id,
+          data: {
+            module_name: node.data.module_name as string,
+            inputs: node.data.inputs as Record<string, any>
+          }
+        })),
+        connections,
+        (nodeId, result) => {
+          // On node completion
+          setExecutionResult(nodeId, result);
+          setExecutionProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
+        },
+        (nodeId) => {
+          // On node start
+          console.log(`Starting execution of node: ${nodeId}`);
+        }
+      );
+
+      console.log('Workflow execution completed:', results);
+    } catch (error) {
+      console.error('Workflow execution failed:', error);
+    } finally {
+      setIsExecutingWorkflow(false);
+      setExecutionProgress({ completed: 0, total: 0 });
+    }
+  }, [nodes, isExecutingWorkflow, setExecutionResult]);
 
   return (
     <>

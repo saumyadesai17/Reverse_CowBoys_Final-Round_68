@@ -9,7 +9,6 @@ import {
   clearStoredCampaignResponse 
 } from "@/lib/backendWorkflowGenerator";
 import { generateWorkflowFromBrief } from "@/lib/workflowGenerator";
-import { testNodeSpacing } from "@/lib/nodeSpacingTest";
 import { Network, Sparkles, Home, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -113,11 +112,6 @@ export default function CanvasPage() {
       setNodes(generatedNodes);
       setEdges(generatedEdges);
       
-      // Test node spacing in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log("🔍 Testing node spacing for generated workflow...");
-        testNodeSpacing();
-      }
       
       // Clear stored response
       clearStoredCampaignResponse();
