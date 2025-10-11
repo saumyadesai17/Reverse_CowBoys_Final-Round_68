@@ -9,7 +9,7 @@ import json
 import re
 
 load_dotenv()
-os.environ["GOOGLE_API_KEY"] = os.getenv('GO_API_KEY')
+os.environ["GOOGLE_API_KEY"] = os.getenv('GEMINI_API_KEY')
 
 def parse_json_from_response(response_text: str) -> dict:
     """
@@ -62,33 +62,17 @@ class ContentOutput(BaseModel):
     generated_copies: List[GeneratedCopy] = Field(..., description="List of generated content copies")
 
 
-web_searcher = Agent(
-    name="Web Searcher",
-    model=Gemini(id="gemini-2.0-flash"),
-    role="Searches the web for information on a topic",
-    description="An intelligent agent that performs comprehensive web searches to gather current and accurate information",
-    tools=[GoogleSearchTools()],
-    instructions=[
-        "1. Perform focused web searches using relevant keywords",
-        "2. Filter results for credibility and recency",
-        "3. Extract key information and main points",
-        "4. Organize information in a logical structure",
-        "5. Verify facts from multiple sources when possible",
-        "6. Focus on authoritative and reliable sources",
-    ],
-)
-
-
-
+# Create a single agent that combines web search and content generation
 post_team = Agent(
-    team=[web_searcher],
     model=Gemini(id="gemini-2.0-flash"),
+    tools=[GoogleSearchTools()],
+    description="Expert content creator and web researcher specializing in marketing copy generation",
     instructions=[
-        "Work together to create compelling ad copy and social media content",
-        "Start by researching the topic, target audience, and market trends",
-        "Create engaging ad posts that convert and drive action",
-        "Focus on benefits, pain points, and call-to-actions",
-        "Include relevant hashtags and emojis for social media optimization",
+        "You are an expert content creator and web researcher. Your role is to:",
+        "1. Research topics using web search to gather current and accurate information",
+        "2. Create compelling ad copy and social media content based on research",
+        "3. Focus on benefits, pain points, and call-to-actions",
+        "4. Include relevant hashtags and emojis for social media optimization",
         
         "CRITICAL: YOU MUST STRICTLY FOLLOW THE JSON FORMAT BELOW:",
         "Always return response in this EXACT JSON structure:",
@@ -110,9 +94,8 @@ post_team = Agent(
         "- hashtags array should contain 5-8 relevant hashtags without # symbol",
         "- emojis array should contain 3-5 appropriate emojis",
         "- Do NOT include any text outside the JSON structure",
-        "DONT INCLUDE ANYTHING BESIDE JSON OUTPUT OR YOU WILL BE TERMINATED .",
-        "YOU ARE ONLY MADE TO GIVE JSON OUTPUT NOTHING ELSE",
         "- Ensure valid JSON syntax with proper quotes and commas",
+        "- Use web search to research the topic and audience before creating content",
     ],
     structured_outputs=ContentOutput,
     markdown=False,
