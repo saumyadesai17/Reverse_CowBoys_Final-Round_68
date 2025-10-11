@@ -120,3 +120,27 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* React Flow Node Alignment Fix - Generalized */
+.react-flow__node {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  width: auto !important;
+  height: auto !important;
+  display: inline-block !important;
+}
+
+.react-flow__node > * {
+  display: block !important;
+}
+
+.react-flow__node.selected {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.react-flow__node:focus {
+  outline: none !important;
+}

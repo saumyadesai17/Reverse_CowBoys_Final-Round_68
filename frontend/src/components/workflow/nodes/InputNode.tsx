@@ -20,7 +20,8 @@ export const InputNode = memo(({ id, data }: InputNodeProps) => {
   const [value, setValue] = useState(data.value);
 
   return (
-    <Card className="w-64 border-2 border-blue-500 shadow-lg">
+    <div className="relative">
+      <Card className="w-64 border-2 border-blue-500 shadow-lg">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-blue-500" />
@@ -52,5 +53,6 @@ export const InputNode = memo(({ id, data }: InputNodeProps) => {
         style={{ top: "50%" }}
       />
     </Card>
+    </div>
   );
 });

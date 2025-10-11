@@ -28,7 +28,8 @@ export const OutputNode = memo(({ id, data }: OutputNodeProps) => {
   );
 
   return (
-    <Card className="w-[100%] border-2 border-orange-500 shadow-lg">
+    <div className="relative">
+      <Card className="w-72 border-2 border-orange-500 shadow-lg">
       <Handle
         type="target"
         position={Position.Left}
@@ -79,5 +80,6 @@ export const OutputNode = memo(({ id, data }: OutputNodeProps) => {
         </Button>
       </CardContent>
     </Card>
+    </div>
   );
 });
