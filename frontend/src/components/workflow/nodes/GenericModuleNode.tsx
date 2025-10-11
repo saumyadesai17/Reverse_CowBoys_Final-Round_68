@@ -56,7 +56,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             value={value}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateInput(inputKey, e.target.value)}
             placeholder={inputDef.description || `Enter ${inputKey}`}
-            className="text-xs"
+            className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
           />
         );
       
@@ -69,7 +69,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             max={inputDef.max}
             value={value}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateInput(inputKey, parseInt(e.target.value) || 0)}
-            className="text-xs"
+            className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
           />
         );
       
@@ -80,12 +80,12 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             value={value} 
             onValueChange={(selectedValue: string) => updateInput(inputKey, selectedValue)}
           >
-            <SelectTrigger className="text-xs">
+            <SelectTrigger className="text-xs bg-slate-700/50 border-slate-600 text-white focus:border-violet-500">
               <SelectValue placeholder={`Select ${inputKey}`} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-slate-800 border-slate-700">
               {inputDef.values?.map((option: string) => (
-                <SelectItem key={option} value={option}>
+                <SelectItem key={option} value={option} className="text-white hover:bg-slate-700 focus:bg-slate-700">
                   {option.replace(/_/g, " ").toUpperCase()}
                 </SelectItem>
               ))}
@@ -100,12 +100,12 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             value={value?.toString()} 
             onValueChange={(selectedValue: string) => updateInput(inputKey, selectedValue === "true")}
           >
-            <SelectTrigger className="text-xs">
+            <SelectTrigger className="text-xs bg-slate-700/50 border-slate-600 text-white focus:border-violet-500">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">Yes</SelectItem>
-              <SelectItem value="false">No</SelectItem>
+            <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectItem value="true" className="text-white hover:bg-slate-700 focus:bg-slate-700">Yes</SelectItem>
+              <SelectItem value="false" className="text-white hover:bg-slate-700 focus:bg-slate-700">No</SelectItem>
             </SelectContent>
           </Select>
         );
@@ -123,7 +123,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
               }
             }}
             placeholder={`Enter ${inputKey} (JSON)`}
-            className="text-xs"
+            className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
           />
         );
     }
@@ -193,8 +193,12 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
   return (
     <div className="relative">
       <Card 
-        className={`w-80 ${isSelected ? "ring-2 ring-blue-500" : ""} ${data.isActive ? `border-[${moduleDefinition.color}]` : ""}`}
-        style={{ borderColor: data.isActive ? moduleDefinition.color : undefined }}
+        className={`w-80 bg-slate-800/90 backdrop-blur-sm transition-all duration-200 ${
+          isSelected 
+            ? "ring-2 ring-violet-500 shadow-xl shadow-violet-500/20 border-violet-500" 
+            : "border-slate-700 hover:border-slate-600"
+        } ${data.isActive ? `border-2` : ""}`}
+        style={{ borderColor: data.isActive && !isSelected ? moduleDefinition.color : undefined }}
       >
         {/* Input Handles */}
         {inputKeys.map((key, index) => {
@@ -205,7 +209,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
               type="target"
               position={Position.Left}
               id={key}
-              className={`w-4 h-4 border-2 border-white shadow-md transition-all duration-200 ${
+              className={`w-4 h-4 border-2 border-slate-900 shadow-md transition-all duration-200 ${
                 isCompatible ? 'animate-pulse ring-2 ring-green-400' : ''
               }`}
               style={{ 
@@ -224,8 +228,11 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: moduleDefinition.color }}
               />
-              <span className="font-medium text-sm">ID: {data.id}</span>
-              <Badge variant={data.isActive ? "default" : "secondary"}>
+              <span className="font-medium text-sm text-white">ID: {data.id}</span>
+              <Badge 
+                variant={data.isActive ? "default" : "secondary"}
+                className={data.isActive ? "bg-violet-600 text-white" : "bg-slate-700 text-slate-300"}
+              >
                 {data.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>
@@ -233,13 +240,14 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
+              className="text-slate-300 hover:text-violet-400 hover:bg-slate-700"
             >
               <Settings className="w-4 h-4" />
             </Button>
           </div>
           <div>
-            <h3 className="font-medium text-sm">{moduleDefinition.display_name}</h3>
-            <p className="text-xs text-gray-600">{moduleDefinition.description}</p>
+            <h3 className="font-medium text-sm text-white">{moduleDefinition.display_name}</h3>
+            <p className="text-xs text-slate-400">{moduleDefinition.description}</p>
           </div>
         </CardHeader>
 
@@ -247,7 +255,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
           <div className="flex items-center justify-between">
             <Badge 
               variant="outline" 
-              className="text-xs"
+              className="text-xs border-slate-600"
               style={{ color: moduleDefinition.color }}
             >
               {moduleDefinition.category}
@@ -255,15 +263,15 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
           </div>
 
           {isExpanded && (
-            <div className="space-y-3 pt-3 border-t max-h-64 overflow-y-auto">
+            <div className="space-y-3 pt-3 border-t border-slate-700">
               {inputKeys.map((inputKey) => {
                 const inputDef = (moduleDefinition.inputs as any)[inputKey];
                 return (
                   <div key={inputKey} className="space-y-1">
-                    <Label className="text-xs flex items-center gap-1">
+                    <Label className="text-xs flex items-center gap-1 text-slate-300">
                       {inputKey.replace(/_/g, " ")}
                       {inputDef?.required && (
-                        <span className="text-red-500">*</span>
+                        <span className="text-red-400">*</span>
                       )}
                     </Label>
                     {renderInputField(inputKey, inputDef)}
@@ -284,7 +292,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             type="source"
             position={Position.Right}
             id={key}
-            className="w-4 h-4 border-2 border-white shadow-md"
+            className="w-4 h-4 border-2 border-slate-900 shadow-md"
             style={{ 
               top: startPosition + (index * handleSpacing),
               backgroundColor: moduleDefinition.color
@@ -303,12 +311,12 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             return (
               <div 
                 key={key} 
-                className={`absolute text-xs px-2 py-1 rounded shadow border text-right transition-all duration-200 whitespace-nowrap ${
+                className={`absolute text-xs px-2 py-1 rounded shadow-lg border text-right transition-all duration-200 whitespace-nowrap ${
                   isCompatible 
-                    ? 'bg-green-100 border-green-400 text-green-800 font-semibold animate-pulse scale-110' 
+                    ? 'bg-green-500 border-green-600 text-white font-semibold animate-pulse scale-110' 
                     : isConnectionActive
-                    ? 'bg-gray-50 border-gray-200 text-gray-500'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'bg-slate-800/90 backdrop-blur-sm border-slate-700 text-slate-400'
+                    : 'bg-slate-800/90 backdrop-blur-sm text-slate-200 border-slate-700'
                 }`}
                 style={{ 
                   top: `${startPosition + (index * handleSpacing) - 12}px`,
@@ -326,12 +334,12 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             return (
               <div 
                 key={key} 
-                className={`absolute text-xs px-2 py-1 rounded shadow border text-left transition-all duration-200 whitespace-nowrap ${
+                className={`absolute text-xs px-2 py-1 rounded shadow-lg border text-left transition-all duration-200 whitespace-nowrap ${
                   isSourceHandle
-                    ? 'bg-blue-100 border-blue-400 text-blue-800 font-semibold ring-2 ring-blue-300'
+                    ? 'bg-violet-500 border-violet-600 text-white font-semibold ring-2 ring-violet-400'
                     : isConnectionActive
-                    ? 'bg-gray-50 border-gray-200 text-gray-500'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'bg-slate-800/90 backdrop-blur-sm border-slate-700 text-slate-400'
+                    : 'bg-slate-800/90 backdrop-blur-sm text-slate-200 border-slate-700'
                 }`}
                 style={{ 
                   top: `${startPosition + (index * handleSpacing) - 12}px`,

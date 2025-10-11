@@ -1,0 +1,452 @@
+Frontend Design Prompt: AI-Powered Campaign Strategist Platform
+Project Overview
+Design a complete web application for an autonomous AI campaign strategist platform that transforms high-level marketing briefs into fully-executable, multi-step campaign workflows. The platform uses a node-based visual workflow editor where users can customize, connect, and execute specialized AI modules to generate comprehensive brand campaigns.
+
+Problem Context
+Business Challenge: Small marketing teams and startups struggle with the complex, time-consuming process of creating complete brand campaigns. Current solutions require multiple tools, specialized expertise, and significant manual coordination.
+
+Solution: A unified platform where users input a single marketing brief (e.g., "Launch a social media campaign for our new sustainable coffee brand targeting Gen Z in Mumbai for World Environment Day") and receive an intelligently-curated workflow of AI modules that autonomously generate strategy, content, visuals, schedules, and execution plans.
+
+Core System Architecture
+Module System (12 Specialized AI Modules)
+The platform contains 12 specialized modules that can be connected together on a visual canvas:​
+
+Content Generation Modules:
+
+visual_asset_generator - Generates images using AI models
+
+video_content_generator - Creates video content from scripts/images
+
+copy_content_generator - Writes marketing copy and captions
+
+Analysis & Planning Modules:
+4. audience_intelligence_analyzer - Analyzes target audience characteristics
+5. campaign_timeline_optimizer - Creates optimized campaign timelines
+
+Scheduling Modules (Planning Only):
+6. content_distribution_scheduler - Plans content posting schedules (does NOT publish)
+7. outreach_call_scheduler - Plans call schedules (does NOT make calls)
+
+Execution Modules (Action Implementation):
+8. content_distribution_executor - Actually publishes scheduled content
+9. voice_interaction_agent - Makes calls and conducts conversations
+
+Research & Engagement Modules:
+10. lead_discovery_engine - Discovers and qualifies leads
+11. collaboration_outreach_composer - Composes personalized outreach messages
+
+Integration Module:
+12. external_api_orchestrator - Universal connector for third-party APIs
+
+How Modules Work
+Module Structure: Each module is a self-contained AI agent with defined inputs, outputs, and processing logic. Modules appear as visual nodes on the canvas with input ports (left side) and output ports (right side).​
+
+Input Ports: Accept specific data types (strings, objects, arrays, enums). Each port displays the parameter name and required/optional indicator.
+
+Output Ports: Emit processed data that can be connected to other modules. Multiple modules can consume the same output.
+
+Module States: Modules have visual indicators showing their status: not configured (gray), configured (blue), executing (animated blue), success (green), failed (red), partial success (yellow).
+
+Parameter Configuration: Clicking a module opens a side panel where users can view/edit all input parameters. Parameters can be manually entered or automatically filled when connected to another module's output.​
+
+Canvas Connectivity Model
+Edge-Based Connections: Modules connect via directed edges (lines) that visually represent data flow from one module's output port to another module's input port.​
+
+Connection Rules:
+
+Edges flow left-to-right (source → target)
+
+Output ports can connect to multiple inputs (one-to-many)
+
+Input ports accept only compatible data types
+
+The canvas validates connections in real-time and shows error indicators for type mismatches
+
+Users can hover over edges to see the data being transferred
+
+Sequential Flow: Data flows through connected modules in order. A module only executes after all its required inputs are satisfied.
+
+Parallel Branches: Multiple modules can execute simultaneously if they receive the same input from a parent module.
+
+Conditional Paths: Some modules output boolean/enum values that determine which downstream path executes.
+
+Page Structure and Functionality
+Page 1: Landing Page
+Purpose: Marketing page that introduces the platform, explains value proposition, and drives user sign-ups.
+
+Key Sections:
+
+Hero section with animated workflow preview
+
+Problem/solution narrative
+
+Module showcase with interactive demonstrations
+
+Pricing tiers
+
+Customer testimonials
+
+Call-to-action for free trial
+
+Page 2: Authentication Pages
+Purpose: User registration, login, password recovery.
+
+Pages Required:
+
+Sign up page with email/OAuth options
+
+Login page
+
+Password reset flow
+
+Email verification
+
+Page 3: Dashboard/Home
+Purpose: Central hub after login showing user's campaigns, recent workflows, and quick actions.
+
+Key Elements:
+
+Campaign list view (grid/list toggle)
+
+Campaign status indicators (draft, running, completed, failed)
+
+Quick stats: total campaigns, active workflows, success rate
+
+"Create New Campaign" prominent button
+
+Recent activity feed
+
+Template library preview
+
+Page 4: Campaign Brief Input
+Purpose: Initial page where users describe their campaign requirements in natural language.
+
+Functionality:
+
+Large text input area for marketing brief
+
+Guided input with intelligent prompts asking clarifying questions
+
+Example briefs for inspiration
+
+Optional structured fields for campaign parameters (budget, timeline, target audience, objectives)
+
+"Generate Workflow" button that sends brief to backend
+
+Loading state with progress indicators while AI processes brief
+
+Page 5: Workflow Canvas Editor (Primary Workspace)
+Purpose: Main interactive workspace where AI-curated workflows are displayed and users customize module connections.
+
+Core Components:
+
+Canvas Area:
+
+Infinite pannable/zoomable canvas powered by node-based UI library​
+
+Grid background for spatial reference
+
+Minimap showing full workflow overview in corner
+
+Auto-layout algorithm initially positions modules logically
+
+Module Nodes:
+
+Rectangular cards with module icon, name, and status indicator
+
+Input ports on left edge, output ports on right edge
+
+Visual styling differentiates module categories (colors/icons)
+
+Hover shows quick preview of inputs/outputs
+
+Click opens detailed configuration panel
+
+Connection Edges:
+
+Bezier curves connecting output → input ports
+
+Color-coded by data type
+
+Animated flow indicator showing data movement during execution
+
+Hover displays data payload preview
+
+Click selects edge (delete key removes)
+
+Module Library Sidebar:
+
+Collapsible panel showing all 12 available modules
+
+Search/filter functionality
+
+Drag-and-drop modules onto canvas
+
+Category grouping with expand/collapse
+
+Configuration Panel:
+
+Right-side slide-out panel (opens when module selected)
+
+Displays all input parameters for selected module
+
+Form inputs appropriate to data type (text fields, dropdowns, number inputs, date pickers)
+
+Shows which parameters are auto-filled from connections vs. requiring manual input
+
+Real-time validation with error messages
+
+"Save" updates module configuration
+
+Top Toolbar:
+
+Workflow name (editable)
+
+Save draft button
+
+Undo/redo
+
+Zoom controls
+
+View options (fit to screen, actual size)
+
+Execute workflow button (disabled until all required inputs satisfied)
+
+Bottom Status Bar:
+
+Connection count
+
+Module count
+
+Validation status (X errors, Y warnings)
+
+Last saved timestamp
+
+Page 6: Workflow Execution Monitor
+Purpose: Real-time monitoring of workflow execution showing progress, logs, and intermediate outputs.
+
+Layout:
+
+Split view: Canvas on left (read-only, showing execution progress), details panel on right
+
+Canvas modules animate/change color as they execute
+
+Real-time execution log stream showing module starts, completions, errors
+
+Timeline view showing module execution order
+
+For each completed module: expandable section showing generated outputs
+
+Ability to download/preview generated assets (images, videos, copies, schedules)
+
+Pause/stop execution controls
+
+Error handling: if module fails, show detailed error and option to retry or modify parameters
+
+Page 7: Campaign Results Review
+Purpose: Comprehensive view of all workflow outputs after successful execution.
+
+Sections:
+
+Generated Assets Gallery:
+
+All images, videos, and written content organized by module
+
+Preview thumbnails with full-screen lightbox view
+
+Download individual assets or bulk export
+
+Regeneration option for each asset
+
+Schedules Display:
+
+Calendar view showing content distribution schedule
+
+Call schedule with lead details
+
+Timeline visualization
+
+Export to CSV/iCal
+
+Campaign Strategy Summary:
+
+AI-generated executive summary of strategy
+
+Audience insights breakdown
+
+Channel recommendations
+
+Performance predictions
+
+Outreach Messages:
+
+List of generated collaboration/lead messages
+
+Preview and edit before sending
+
+Send status tracking
+
+Approval Actions:
+
+Mark entire campaign as approved
+
+Approve individual components
+
+Request regeneration of specific elements
+
+Finalize and move to execution
+
+Page 8: Campaign Execution Dashboard
+Purpose: Active monitoring of approved campaigns being executed in real-world channels.
+
+Features:
+
+Live metrics from content distribution executor (posts published, engagement rates)
+
+Call agent performance (calls completed, conversion rates, sentiment)
+
+Social media analytics integration
+
+Real-time alerts for failures or exceptional performance
+
+Manual intervention options (pause campaign, modify schedule)
+
+Page 9: Template Library
+Purpose: Pre-built workflow templates users can clone and customize.
+
+Functionality:
+
+Grid of workflow templates categorized by industry, campaign type, objective
+
+Preview shows canvas layout and modules included
+
+"Use Template" clones workflow to user's account
+
+Community-contributed templates (optional)
+
+User's saved templates for reuse
+
+Page 10: Settings & Configuration
+Purpose: Platform configurations, integrations, and account management.
+
+Sections:
+
+API Integrations:
+
+Connected social media accounts (Instagram, LinkedIn, X, Facebook)
+
+CRM integrations
+
+Analytics platforms
+
+OAuth connection management
+
+Team Management:
+
+Team member invitations
+
+Role-based permissions
+
+Collaboration settings
+
+Billing & Subscription:
+
+Current plan details
+
+Usage metrics (API calls, modules executed, storage)
+
+Upgrade/downgrade options
+
+Payment method management
+
+Preferences:
+
+Default module configurations
+
+Canvas theme (light/dark mode)
+
+Notification settings
+
+Auto-save preferences
+
+Page 11: Module Documentation
+Purpose: Comprehensive reference for each module's capabilities, inputs, outputs, and usage.
+
+Layout:
+
+Left sidebar with module navigation
+
+Main content area showing for each module:
+
+Description and use cases
+
+Complete input parameter reference (types, validation rules, examples)
+
+Output structure with sample data
+
+Compatible connection modules
+
+Usage examples with visual workflow snippets
+
+Best practices and tips
+
+Page 12: Workflow History & Versioning
+Purpose: Access historical workflow executions and version control.
+
+Features:
+
+List of all past workflow runs with timestamps
+
+Filter by campaign, date range, status
+
+Compare different versions side-by-side
+
+Restore previous workflow configurations
+
+Execution analytics (average completion time, failure rates per module)
+
+Technical Workflow Process
+Step 1: Brief Submission
+User enters marketing brief on Campaign Brief Input page → Backend AI processes brief → Backend returns curated workflow JSON specifying:
+
+Which modules to include
+
+Initial module positioning
+
+Pre-configured parameter values
+
+Suggested connections between modules
+
+Step 2: Workflow Customization
+Frontend renders workflow on canvas → User can:
+
+Add/remove modules from library
+
+Rearrange module positions
+
+Create/delete connections by dragging between ports
+
+Modify parameters in configuration panel
+
+System validates connections ensure data type compatibility
+
+Step 3: Workflow Execution
+User clicks execute → Frontend sends complete workflow graph to backend → Backend orchestrates module execution respecting dependency order → Frontend receives real-time execution updates via WebSocket → Progress reflected on canvas and execution monitor
+
+Step 4: Results & Approval
+All modules complete → Frontend displays results review page → User approves/modifies outputs → Approved campaigns move to execution phase where scheduling modules trigger executor modules
+
+Visual Design Considerations
+Canvas Interactions: Should feel smooth with 60fps animations, rubber-band edge drawing, magnetic snapping when ports align, keyboard shortcuts for power users.​
+
+Responsive Behavior: Canvas editor optimized for desktop (minimum 1280px width). Mobile shows read-only workflow view with scrollable module list.
+
+Data Type Visualization: Use consistent color coding (strings=blue, objects=purple, arrays=green, enums=orange) across ports, edges, and documentation.​
+
+Progressive Disclosure: Don't overwhelm users with all 12 modules initially. Show commonly used modules by default with "Show all" expansion.
+
+Error Handling: Clear visual feedback for validation errors, connection incompatibilities, execution failures with actionable resolution steps.
+
+Loading States: Skeleton screens for canvas loading, shimmer effects for executing modules, progress bars for long operations.
+
+This platform transforms complex campaign creation into an intuitive, visual, AI-powered workflow experience.
