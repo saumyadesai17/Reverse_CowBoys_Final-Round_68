@@ -21,9 +21,8 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from agno.agent import Agent
-from agno.models.google import Gemini
-from agno.tools.exa import ExaTools
-from agno.tools.firecrawl import FirecrawlTools
+from agno.models import Gemini
+from agno.tools import ExaTools, FirecrawlTools
 from dotenv import load_dotenv
 
 # Load environment variables
