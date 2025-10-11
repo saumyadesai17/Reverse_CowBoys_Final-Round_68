@@ -286,6 +286,17 @@ class TrendAnalysisAgent(BaseModel):
     competitor_handles: Optional[List[str]] = Field(None, description="Competitor handles")
     output_format: Optional[str] = Field(None, description="Output format")
 
+class ModuleConnection(BaseModel):
+    """Connection between modules"""
+    target_module: str = Field(..., description="Target module name")
+    source_output: str = Field(..., description="Source output field")
+    target_input: str = Field(..., description="Target input field")
+
+class ModuleConnections(BaseModel):
+    """Module connections for a specific module"""
+    module_name: str = Field(..., description="Module name")
+    connections: List[ModuleConnection] = Field(..., description="List of connections")
+
 class ModuleConfigurations(BaseModel):
     """Container for all module configurations"""
     campaign_strategy_generator: Optional[CampaignStrategyGenerator] = Field(None, description="Campaign strategy generator config")
@@ -318,6 +329,7 @@ class CampaignResponse(BaseModel):
     research_summary: str = Field(..., description="Summary of research conducted")
     sources: List[str] = Field(..., description="List of sources used")
     module_configurations: Optional[ModuleConfigurations] = Field(None, description="Prefilled module configurations")
+    module_connections: Optional[List[ModuleConnections]] = Field(None, description="Module connections and data flow")
     timestamp: datetime = Field(default_factory=datetime.now)
 
 class QuickCampaignRequest(BaseModel):
@@ -329,6 +341,400 @@ class HealthResponse(BaseModel):
     status: str
     agent_ready: bool
     timestamp: datetime
+
+def get_module_connections() -> List[ModuleConnections]:
+    """Get predefined module connections for the workflow"""
+    return [
+        ModuleConnections(
+            module_name="audience_intelligence_analyzer",
+            connections=[
+                ModuleConnection(
+                    target_module="copy_content_generator",
+                    source_output="audience_segments",
+                    target_input="target_audience"
+                ),
+                ModuleConnection(
+                    target_module="campaign_timeline_optimizer",
+                    source_output="audience_segments",
+                    target_input="audience_segments"
+                ),
+                ModuleConnection(
+                    target_module="campaign_timeline_optimizer",
+                    source_output="optimal_posting_times",
+                    target_input="optimal_posting_times"
+                ),
+                ModuleConnection(
+                    target_module="lead_discovery_engine",
+                    source_output="audience_segments",
+                    target_input="audience_segments"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="copy_content_generator",
+            connections=[
+                ModuleConnection(
+                    target_module="visual_asset_generator",
+                    source_output="generated_copies",
+                    target_input="prompt"
+                ),
+                ModuleConnection(
+                    target_module="content_distribution_scheduler",
+                    source_output="generated_copies",
+                    target_input="generated_copies"
+                ),
+                ModuleConnection(
+                    target_module="collaboration_outreach_composer",
+                    source_output="generated_copies",
+                    target_input="generated_copies"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="visual_asset_generator",
+            connections=[
+                ModuleConnection(
+                    target_module="video_content_generator",
+                    source_output="generated_images",
+                    target_input="image_inputs"
+                ),
+                ModuleConnection(
+                    target_module="content_distribution_scheduler",
+                    source_output="generated_images",
+                    target_input="generated_images"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="video_content_generator",
+            connections=[
+                ModuleConnection(
+                    target_module="content_distribution_scheduler",
+                    source_output="video_url",
+                    target_input="video_url"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="campaign_timeline_optimizer",
+            connections=[
+                ModuleConnection(
+                    target_module="content_distribution_scheduler",
+                    source_output="optimized_timeline",
+                    target_input="optimized_timeline"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="content_distribution_scheduler",
+            connections=[
+                ModuleConnection(
+                    target_module="content_distribution_executor",
+                    source_output="distribution_schedule",
+                    target_input="distribution_schedule"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="lead_discovery_engine",
+            connections=[
+                ModuleConnection(
+                    target_module="outreach_call_scheduler",
+                    source_output="discovered_leads",
+                    target_input="discovered_leads"
+                ),
+                ModuleConnection(
+                    target_module="collaboration_outreach_composer",
+                    source_output="discovered_leads",
+                    target_input="discovered_leads"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="outreach_call_scheduler",
+            connections=[
+                ModuleConnection(
+                    target_module="voice_interaction_agent",
+                    source_output="call_schedule",
+                    target_input="call_schedule"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="voice_interaction_agent",
+            connections=[
+                ModuleConnection(
+                    target_module="external_api_orchestrator",
+                    source_output="call_results",
+                    target_input="request_body"
+                ),
+                ModuleConnection(
+                    target_module="external_api_orchestrator",
+                    source_output="extracted_intelligence",
+                    target_input="request_body"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="collaboration_outreach_composer",
+            connections=[
+                ModuleConnection(
+                    target_module="content_distribution_executor",
+                    source_output="outreach_messages",
+                    target_input="distribution_schedule"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="content_distribution_executor",
+            connections=[
+                ModuleConnection(
+                    target_module="external_api_orchestrator",
+                    source_output="executed_posts",
+                    target_input="request_body"
+                )
+            ]
+        ),
+        ModuleConnections(
+            module_name="external_api_orchestrator",
+            connections=[
+                ModuleConnection(
+                    target_module="any_module",
+                    source_output="parsed_data",
+                    target_input="[compatible_field]"
+                )
+            ]
+        )
+    ]
+
+def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigurations:
+    """Fallback module configuration extraction without external APIs"""
+    
+    # Simple keyword-based extraction
+    brief_lower = campaign_brief.lower()
+    
+    # Extract basic information
+    brand_name = None
+    if "brand" in brief_lower:
+        # Try to extract brand name
+        words = campaign_brief.split()
+        for i, word in enumerate(words):
+            if word.lower() in ["brand", "company", "business"]:
+                if i + 1 < len(words):
+                    brand_name = words[i + 1]
+                break
+    
+    # Extract target audience
+    target_audience = None
+    age_range = None
+    if "gen z" in brief_lower:
+        age_range = AgeRange(min=18, max=26)
+        target_audience = TargetAudience(
+            age_range=age_range,
+            locations=["Mumbai"] if "mumbai" in brief_lower else None,
+            interests=["sustainability", "environment", "social media"],
+            demographics=["Gen Z", "tech-savvy", "environmentally conscious"]
+        )
+    elif "millennial" in brief_lower:
+        age_range = AgeRange(min=27, max=42)
+        target_audience = TargetAudience(
+            age_range=age_range,
+            locations=["Delhi"] if "delhi" in brief_lower else None,
+            interests=["fashion", "sustainability", "lifestyle"],
+            demographics=["Millennials", "working professionals"]
+        )
+    elif "professional" in brief_lower:
+        age_range = AgeRange(min=25, max=45)
+        target_audience = TargetAudience(
+            age_range=age_range,
+            locations=["Bangalore"] if "bangalore" in brief_lower else None,
+            interests=["fitness", "health", "work-life balance"],
+            demographics=["Working professionals", "tech workers"]
+        )
+    
+    # Extract product/service details
+    product_details = None
+    if "coffee" in brief_lower:
+        product_details = ProductServiceDetails(
+            name="Sustainable Coffee Brand",
+            category="Food & Beverage",
+            features=["eco-friendly", "sustainable sourcing", "premium quality"],
+            unique_selling_points=["environmentally conscious", "ethically sourced"]
+        )
+    elif "fitness" in brief_lower and "app" in brief_lower:
+        product_details = ProductServiceDetails(
+            name="Fitness App",
+            category="Health & Fitness",
+            features=["workout tracking", "personalized plans", "progress monitoring"],
+            unique_selling_points=["convenient", "time-efficient", "motivating"]
+        )
+    elif "fashion" in brief_lower:
+        product_details = ProductServiceDetails(
+            name="Eco-Friendly Fashion Brand",
+            category="Fashion & Lifestyle",
+            features=["sustainable materials", "ethical production", "trendy designs"],
+            unique_selling_points=["environmentally friendly", "stylish", "conscious fashion"]
+        )
+    
+    # Extract budget range
+    budget_range = None
+    if "high budget" in brief_lower or "high" in brief_lower:
+        budget_range = BudgetRange(min=100000, max=500000)
+    elif "medium budget" in brief_lower or "medium" in brief_lower:
+        budget_range = BudgetRange(min=50000, max=150000)
+    elif "low budget" in brief_lower or "low" in brief_lower:
+        budget_range = BudgetRange(min=10000, max=50000)
+    else:
+        budget_range = BudgetRange(min=50000, max=150000)  # Default medium
+    
+    # Extract occasion/season
+    season_context = None
+    if "world environment day" in brief_lower:
+        season_context = "World Environment Day"
+    elif "diwali" in brief_lower:
+        season_context = "Diwali Season"
+    elif "new year" in brief_lower:
+        season_context = "New Year Resolution Season"
+    elif "q1" in brief_lower:
+        season_context = "Q1 Launch"
+    
+    # Create module configurations
+    campaign_strategy = CampaignStrategyGenerator(
+        brand_name=brand_name,
+        campaign_goal="Increase brand awareness and engagement",
+        target_audience=target_audience,
+        brand_voice="Authentic and inspiring",
+        product_or_service_details=product_details,
+        competitor_brands=["Industry competitors"],
+        marketing_channels=["Instagram", "Facebook", "LinkedIn"],
+        season_or_event_context=season_context,
+        budget_range=budget_range,
+        duration_days=30
+    )
+    
+    copywriting_agent = CopywritingAgent(
+        campaign_brief=campaign_brief,
+        content_type="Social media posts",
+        tone_of_voice="Engaging and authentic",
+        language="English",
+        keywords=["sustainability", "innovation", "quality"],
+        call_to_action="Learn more",
+        platform="Instagram",
+        word_limit=150,
+        audience_profile=target_audience,
+        brand_guidelines=BrandGuidelines(
+            colors=["green", "blue", "white"],
+            style="Modern and clean",
+            tone_of_voice="Authentic and inspiring"
+        )
+    )
+    
+    visual_asset = VisualAssetGenerator(
+        prompt=f"Professional marketing visual for {campaign_brief}",
+        brand_guidelines=BrandGuidelines(
+            colors=["green", "blue", "white"],
+            style="Modern and clean"
+        ),
+        quantity=5,
+        dimensions=Dimensions(width=1080, height=1080),
+        image_style="Professional photography",
+        negative_prompts=["blurry", "low quality", "unprofessional"],
+        campaign_context=campaign_brief
+    )
+    
+    media_plan = MediaPlanGenerator(
+        campaign_objective="Brand awareness and engagement",
+        target_audience=target_audience,
+        budget=budget_range.max if budget_range else 100000,
+        duration_days=30,
+        preferred_platforms=["Instagram", "Facebook", "LinkedIn"],
+        content_types=["Images", "Videos", "Stories"],
+        posting_frequency="Daily"
+    )
+    
+    social_scheduler = SocialPostScheduler(
+        target_platforms=["Instagram", "Facebook", "LinkedIn"],
+        timezones=["Asia/Kolkata"],
+        posting_window=PostingWindow(start_time="09:00", end_time="21:00"),
+        schedule_strategy="Peak engagement times",
+        preferred_posting_days=["Monday", "Wednesday", "Friday"],
+        brand_guidelines=BrandGuidelines(
+            hashtag_rules=["Use relevant hashtags", "Keep under 30"],
+            tag_rules=["Tag relevant accounts", "Use location tags"]
+        )
+    )
+    
+    ad_optimizer = AdBudgetOptimizer(
+        campaign_objective="Maximize reach and engagement",
+        total_budget=budget_range.max if budget_range else 100000,
+        target_audience=target_audience,
+        optimization_goal="Maximize conversions",
+        time_horizon_days=30
+    )
+    
+    performance_analytics = PerformanceAnalyticsAgent(
+        metrics=["Reach", "Engagement", "Clicks", "Conversions"],
+        platforms=["Instagram", "Facebook", "LinkedIn"],
+        date_range=DateRange(start_date="2024-01-01", end_date="2024-01-31"),
+        data_sources=["Social media platforms", "Analytics tools"],
+        aggregation_level="Daily",
+        compare_with_previous_period=True
+    )
+    
+    sentiment_analysis = SentimentAnalysisAgent(
+        language="English",
+        platform="Social media",
+        date_range=DateRange(start_date="2024-01-01", end_date="2024-01-31"),
+        sentiment_categories=["Positive", "Negative", "Neutral"],
+        include_neutral=True,
+        keywords_to_track=["brand", "product", "service"]
+    )
+    
+    campaign_supervisor = CampaignSupervisor(
+        thresholds=Thresholds(
+            engagement_rate=3.0,
+            conversion_rate=2.0,
+            sentiment_score=0.7
+        ),
+        alert_preferences="Email notifications"
+    )
+    
+    asset_review = AssetReviewAgent(
+        brand_guidelines=BrandGuidelines(
+            colors=["green", "blue", "white"],
+            fonts=["Modern sans-serif"],
+            logo_usage_rules="Maintain brand consistency",
+            tone_of_voice="Professional and authentic"
+        ),
+        compliance_rules=["Brand guidelines compliance", "Platform standards"],
+        platform_standards=["Instagram", "Facebook", "LinkedIn"],
+        review_criteria=["Visual quality", "Brand alignment", "Message clarity"]
+    )
+    
+    trend_analysis = TrendAnalysisAgent(
+        industry_keywords=["sustainability", "innovation", "technology"],
+        platforms=["Instagram", "Facebook", "LinkedIn"],
+        region="India",
+        time_window_days=30,
+        data_sources=["Social media APIs", "Trend analysis tools"],
+        sentiment_tracking=True,
+        competitor_handles=["competitor1", "competitor2"],
+        output_format="JSON"
+    )
+    
+    return ModuleConfigurations(
+        campaign_strategy_generator=campaign_strategy,
+        copywriting_agent=copywriting_agent,
+        visual_asset_generator=visual_asset,
+        media_plan_generator=media_plan,
+        social_post_scheduler=social_scheduler,
+        ad_budget_optimizer=ad_optimizer,
+        performance_analytics_agent=performance_analytics,
+        sentiment_analysis_agent=sentiment_analysis,
+        campaign_supervisor=campaign_supervisor,
+        asset_review_agent=asset_review,
+        trend_analysis_agent=trend_analysis
+    )
 
 def extract_module_configurations(campaign_brief: str, agent: Agent) -> ModuleConfigurations:
     """Extract and infer module configurations from campaign brief using LLM"""
@@ -544,6 +950,9 @@ async def create_campaign_plan(request: CampaignRequest):
     - Geographic location
     - Special occasions or seasons
     - Budget considerations
+    
+    Note: This endpoint does NOT include module connections.
+    Use /campaign/quick for module connections.
     """
     if not agent:
         raise HTTPException(status_code=503, detail="Agent not initialized")
@@ -608,7 +1017,8 @@ async def create_campaign_plan(request: CampaignRequest):
             strategy_plan=strategy_plan,
             research_summary="Research conducted using ExaTools and FirecrawlTools with comprehensive field extraction",
             sources=sources,
-            module_configurations=module_configurations
+            module_configurations=module_configurations,
+            module_connections=None  # No connections for /campaign/plan
         )
         
     except Exception as e:
@@ -622,9 +1032,11 @@ async def create_quick_campaign(request: QuickCampaignRequest):
     This endpoint generates:
     1. A detailed campaign strategy plan using real-time research
     2. Prefilled module configurations for all content generation modules
-    3. Extracted and inferred fields based on the campaign brief
+    3. Module connections for workflow orchestration
+    4. Extracted and inferred fields based on the campaign brief
     
-    The module configurations can be used directly for content generation workflows.
+    This is the ONLY endpoint that includes module connections.
+    The module configurations and connections can be used directly for content generation workflows.
     """
     if not agent:
         raise HTTPException(status_code=503, detail="Agent not initialized")
@@ -663,6 +1075,9 @@ async def create_quick_campaign(request: QuickCampaignRequest):
         # Extract module configurations using LLM
         module_configurations = extract_module_configurations(request.brief, agent)
         
+        # Get module connections
+        module_connections = get_module_connections()
+        
         # Extract sources
         sources = ["ExaTools research", "FirecrawlTools scraping"]
         
@@ -671,11 +1086,64 @@ async def create_quick_campaign(request: QuickCampaignRequest):
             strategy_plan=strategy_plan,
             research_summary="Research conducted using ExaTools and FirecrawlTools with comprehensive field extraction",
             sources=sources,
-            module_configurations=module_configurations
+            module_configurations=module_configurations,
+            module_connections=module_connections
         )
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating quick campaign: {str(e)}")
+        # Check if it's a rate limiting error
+        if "429" in str(e) or "Too Many Requests" in str(e):
+            print("Rate limit hit, using fallback strategy generation...")
+            
+            # Generate fallback strategy without external APIs
+            fallback_strategy = f"""
+            # Campaign Strategy for: {request.brief}
+            
+            ## Campaign Overview
+            Based on your brief, here's a comprehensive social media campaign strategy:
+            
+            ### Target Audience Analysis
+            - Primary audience: {request.brief.split('targeting')[1].split('for')[0].strip() if 'targeting' in request.brief else 'General audience'}
+            - Geographic focus: {request.brief.split('in')[1].split('for')[0].strip() if 'in' in request.brief else 'Global'}
+            - Campaign context: {request.brief.split('for')[1].strip() if 'for' in request.brief else 'General promotion'}
+            
+            ### Content Strategy
+            1. **Visual Content**: Create engaging visuals that align with your brand
+            2. **Copy Strategy**: Develop compelling copy that resonates with your target audience
+            3. **Platform Optimization**: Tailor content for each social media platform
+            4. **Engagement Tactics**: Use interactive elements to boost engagement
+            
+            ### Campaign Timeline
+            - Duration: 30 days
+            - Phase 1 (Days 1-10): Brand awareness and introduction
+            - Phase 2 (Days 11-20): Engagement and community building
+            - Phase 3 (Days 21-30): Conversion and retention
+            
+            ### Success Metrics
+            - Reach and impressions
+            - Engagement rate
+            - Click-through rate
+            - Conversion rate
+            
+            Note: This strategy was generated using fallback logic due to API rate limits.
+            """
+            
+            # Use fallback module configurations
+            module_configurations = extract_module_configurations_fallback(request.brief)
+            
+            # Get module connections
+            module_connections = get_module_connections()
+            
+            return CampaignResponse(
+                campaign_brief=request.brief,
+                strategy_plan=fallback_strategy,
+                research_summary="Strategy generated using fallback logic (external APIs rate limited)",
+                sources=["Fallback strategy generation", "Keyword-based extraction"],
+                module_configurations=module_configurations,
+                module_connections=module_connections
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Error generating quick campaign: {str(e)}")
 
 @app.get("/campaign/examples")
 async def get_campaign_examples():
@@ -723,6 +1191,16 @@ async def get_agent_config():
             "Budget recommendations",
             "Timeline planning"
         ]
+    }
+
+@app.get("/module/connections")
+async def get_module_connections_endpoint():
+    """Get module connections structure"""
+    connections = get_module_connections()
+    return {
+        "total_modules": len(connections),
+        "module_connections": connections,
+        "description": "Predefined workflow connections between content generation modules"
     }
 
 # Background task for async processing
