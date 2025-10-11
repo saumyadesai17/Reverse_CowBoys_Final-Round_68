@@ -56,7 +56,7 @@ def visual_asset_manager(args: dict) -> dict:
 
     return {"image_urls": image_urls}
 
-result = generate_images({
+result = visual_asset_manager({
     "prompt": "a cyberpunk city at night with neon lights",
     "quantity": 3,
     "dimensions": {"width": 512, "height": 512},
