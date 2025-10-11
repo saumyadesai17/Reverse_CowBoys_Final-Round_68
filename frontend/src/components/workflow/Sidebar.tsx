@@ -135,7 +135,7 @@ export function Sidebar({
           <Button 
             onClick={handleRunWorkflow}
             disabled={isExecutingWorkflow || nodesCount === 0}
-            className="w-full"
+            className="w-full bg-violet-600 hover:bg-violet-700 text-white"
             size="sm"
           >
             <Play className="w-4 h-4 mr-2" />
