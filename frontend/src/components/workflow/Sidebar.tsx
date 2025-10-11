@@ -93,12 +93,12 @@ export function Sidebar({
 
   if (isCollapsed) {
     return (
-      <div className="w-12 bg-white border-l border-gray-200 p-2 flex flex-col items-center">
+      <div className="w-12 bg-slate-900/90 backdrop-blur-sm border-l border-slate-800 p-2 flex flex-col items-center shadow-xl">
         <Button
           onClick={onToggleCollapse}
           size="sm"
           variant="ghost"
-          className="w-8 h-8 p-0"
+          className="w-8 h-8 p-0 text-slate-300 hover:text-violet-400 hover:bg-slate-800"
         >
           <ChevronLeft className="w-4 h-4" />
         </Button>
@@ -107,29 +107,29 @@ export function Sidebar({
   }
 
   return (
-    <div className="w-80 h-[98%] overflow-auto bg-white border-l border-gray-200 p-4 space-y-4">
+    <div className="w-80 h-[98%] overflow-auto bg-slate-900/90 backdrop-blur-sm border-l border-slate-800 p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent shadow-xl">
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Campaign Canvas</h2>
+          <h2 className="text-lg font-semibold text-white">Campaign Canvas</h2>
           <Button
             onClick={onToggleCollapse}
             size="sm"
             variant="ghost"
-            className="w-8 h-8 p-0"
+            className="w-8 h-8 p-0 text-slate-300 hover:text-violet-400 hover:bg-slate-800"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-slate-400">
           Build your AI-powered marketing campaign workflow
         </p>
       </div>
 
       {/* Workflow Controls */}
-      <Card>
+      <Card className="bg-slate-800/50 border-slate-700">
         <CardHeader className="pb-3">
-          <h3 className="font-medium text-sm">Workflow Controls</h3>
+          <h3 className="font-medium text-sm text-white">Workflow Controls</h3>
         </CardHeader>
         <CardContent className="space-y-2">
           <Button 
@@ -141,7 +141,11 @@ export function Sidebar({
             <Play className="w-4 h-4 mr-2" />
             {isExecutingWorkflow ? `Running... (${executionProgress.completed}/${executionProgress.total})` : "Run Campaign"}
           </Button>
-          <Button variant="outline" size="sm" className="w-full">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full border-slate-600 bg-slate-800/50 text-slate-300 hover:bg-slate-700 hover:text-white hover:border-slate-500 transition-all"
+          >
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </Button>
@@ -149,15 +153,15 @@ export function Sidebar({
       </Card>
 
       {/* Available Modules */}
-      <Card className="flex-1">
+      <Card className="flex-1 bg-slate-800/50 border-slate-700">
         <CardHeader className="pb-3">
-          <h3 className="font-medium text-sm">Available Modules</h3>
+          <h3 className="font-medium text-sm text-white">Available Modules</h3>
         </CardHeader>
-        <CardContent className="space-y-2 max-h-96 overflow-y-auto">
+        <CardContent className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
           {filteredModules.map((module) => (
             <div
               key={module.id}
-              className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer group"
+              className="p-3 border border-slate-700 bg-slate-800/30 rounded-lg hover:bg-slate-700/70 hover:border-violet-500 cursor-pointer group transition-all duration-200 shadow-sm hover:shadow-md"
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData("application/reactflow", JSON.stringify({
@@ -168,27 +172,32 @@ export function Sidebar({
             >
               <div className="flex items-start gap-3">
                 <div 
-                  className="p-1 rounded"
-                  style={{ backgroundColor: `${module.color}20` }}
+                  className="p-1.5 rounded transition-all duration-200"
+                  style={{ 
+                    backgroundColor: `${module.color}20`,
+                  }}
                 >
                   <module.icon 
-                    className="w-4 h-4"
+                    className="w-4 h-4 transition-transform duration-200 group-hover:scale-110"
                     style={{ color: module.color }}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium truncate">{module.name}</h4>
-                    <Badge variant="secondary" className="text-xs">
+                    <h4 className="text-sm font-medium truncate text-white group-hover:text-violet-300 transition-colors">{module.name}</h4>
+                    <Badge 
+                      variant="secondary" 
+                      className="text-xs bg-slate-700 text-slate-300 border-none group-hover:bg-violet-600 group-hover:text-white transition-colors"
+                    >
                       {module.category}
                     </Badge>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">{module.description}</p>
-                  <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-xs text-slate-400 mt-1 group-hover:text-slate-300 transition-colors">{module.description}</p>
+                  <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="h-6 text-xs"
+                      className="h-6 text-xs bg-slate-800 border-violet-500/50 text-violet-400 hover:bg-violet-600 hover:text-white hover:border-violet-600 transition-all shadow-sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAddToCanvas(module.id);

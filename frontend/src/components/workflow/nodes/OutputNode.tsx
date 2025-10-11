@@ -16,7 +16,8 @@ interface OutputNodeProps extends NodeProps {
 }
 
 export const OutputNode = memo(({ id, data }: OutputNodeProps) => {
-  const { connectionPreview } = useCampaignStore();
+  const { connectionPreview, selectedNodeId } = useCampaignStore();
+  const isSelected = selectedNodeId === id;
   
   const handleDownload = () => {
     // Handle campaign package download
@@ -29,12 +30,16 @@ export const OutputNode = memo(({ id, data }: OutputNodeProps) => {
 
   return (
     <div className="relative">
-      <Card className="w-72 border-2 border-orange-500 shadow-lg">
+      <Card className={`w-72 border-2 bg-slate-800/90 backdrop-blur-sm shadow-xl transition-all duration-200 ${
+        isSelected 
+          ? "border-violet-500 ring-2 ring-violet-500 shadow-violet-500/20" 
+          : "border-orange-500 hover:border-orange-400"
+      }`}>
       <Handle
         type="target"
         position={Position.Left}
         id="input"
-        className={`w-4 h-4 border-2 border-white shadow-md transition-all duration-200 ${
+        className={`w-4 h-4 border-2 border-slate-900 shadow-md transition-all duration-200 ${
           isCompatible ? 'animate-pulse ring-2 ring-green-400' : ''
         }`}
         style={{ 
@@ -46,22 +51,22 @@ export const OutputNode = memo(({ id, data }: OutputNodeProps) => {
       
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-orange-500" />
-          <span className="font-medium text-sm">{data.label}</span>
-          <Badge variant="secondary" className="text-xs">Output</Badge>
+          <CheckCircle className="w-4 h-4 text-orange-400" />
+          <span className="font-medium text-sm text-white">{data.label}</span>
+          <Badge variant="secondary" className="text-xs bg-orange-500/20 text-orange-400 border-orange-500/30">Output</Badge>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-3">
         <div className="space-y-2">
-          <div className="text-xs text-gray-600">
+          <div className="text-xs text-slate-400">
             Campaign results will appear here
           </div>
           
           {data.results.length > 0 && (
             <div className="space-y-1">
               {data.results.map((result, index) => (
-                <div key={index} className="p-2 bg-gray-50 rounded text-xs">
+                <div key={index} className="p-2 bg-slate-700/50 border border-slate-600 rounded text-xs text-slate-200">
                   {result.name || `Asset ${index + 1}`}
                 </div>
               ))}
@@ -72,7 +77,7 @@ export const OutputNode = memo(({ id, data }: OutputNodeProps) => {
         <Button
           onClick={handleDownload}
           size="sm"
-          className="w-full h-8"
+          className="w-full h-8 bg-orange-600 hover:bg-orange-700 text-white"
           disabled={data.results.length === 0}
         >
           <Download className="w-3 h-3 mr-2" />
