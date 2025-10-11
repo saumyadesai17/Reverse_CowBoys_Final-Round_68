@@ -1,6 +1,15 @@
-# Authentication Module
+# FastAPI Authentication Module
 
-A simple Flask-based authentication system with MongoDB integration.
+A modern, high-performance authentication system built with FastAPI and MongoDB integration.
+
+## Features
+
+- ⚡ **FastAPI**: High-performance async framework
+- 📚 **Auto Documentation**: Interactive API docs at `/docs`
+- 🔐 **JWT Authentication**: Secure token-based auth
+- 🗄️ **MongoDB**: Scalable database integration
+- ✅ **Type Safety**: Full Pydantic model validation
+- 🚀 **Async Support**: Non-blocking operations
 
 ## Setup
 
@@ -15,6 +24,10 @@ python app.py
 ```
 
 The server will start on `http://localhost:5002`
+
+3. Access interactive documentation:
+- **Swagger UI**: `http://localhost:5002/docs`
+- **ReDoc**: `http://localhost:5002/redoc`
 
 ## API Endpoints
 
@@ -101,16 +114,19 @@ Verify if a JWT token is valid.
 }
 ```
 
-## Features
+## Key Features
 
-- ✅ User registration with email validation
-- ✅ Secure password hashing using bcrypt
-- ✅ JWT token-based authentication
-- ✅ Password strength validation (minimum 6 characters)
-- ✅ Email format validation
-- ✅ CORS enabled for frontend integration
-- ✅ Error handling and validation
-- ✅ MongoDB integration
+- ✅ **User Registration** with email validation
+- ✅ **Secure Password Hashing** using bcrypt
+- ✅ **JWT Token Authentication** with 7-day expiration
+- ✅ **Password Strength Validation** (minimum 6 characters)
+- ✅ **Email Format Validation** with regex
+- ✅ **CORS Enabled** for frontend integration
+- ✅ **Comprehensive Error Handling** with proper HTTP status codes
+- ✅ **MongoDB Integration** with SSL support
+- ✅ **Automatic API Documentation** with Swagger UI
+- ✅ **Type Safety** with Pydantic models
+- ✅ **Async/Await Support** for better performance
 
 ## Security Notes
 
