@@ -133,6 +133,52 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
   const inputKeys = Object.keys(moduleDefinition.inputs);
   const outputKeys = Object.keys(moduleDefinition.outputs);
 
+  // Dynamic spacing calculation for optimal UX
+  const CARD_HEIGHT = 240; // Actual collapsed card height
+  const HEADER_HEIGHT = 70; // ID + Title + Description area
+  const FOOTER_HEIGHT = 50; // Execute button area  
+  const VERTICAL_PADDING = 20; // Padding from top and bottom of content area
+  
+  // Calculate usable space for handles (between header and footer)
+  const CONTENT_AREA_HEIGHT = CARD_HEIGHT - HEADER_HEIGHT - FOOTER_HEIGHT; // ~120px
+  const USABLE_HEIGHT = CONTENT_AREA_HEIGHT - (VERTICAL_PADDING * 2); // ~80px
+  
+  // Calculate spacing based on the maximum number of handles
+  const maxHandles = Math.max(inputKeys.length, outputKeys.length, 1);
+  
+  // Calculate handle spacing and start position for perfect centering
+  let handleSpacing: number;
+  let startPosition: number;
+  
+  if (maxHandles === 1) {
+    // Single handle: center it perfectly in the content area
+    handleSpacing = 0;
+    startPosition = HEADER_HEIGHT + (CONTENT_AREA_HEIGHT / 2);
+  } else {
+    // Multiple handles: distribute evenly in usable space
+    // Space between handles
+    handleSpacing = USABLE_HEIGHT / (maxHandles - 1);
+    
+    // Clamp spacing for readability (labels need at least 22px)
+    const MIN_SPACING = 30;
+    const MAX_SPACING = 45;
+    
+    if (handleSpacing < MIN_SPACING) {
+      // Too many handles - use minimum spacing and adjust start position
+      handleSpacing = MIN_SPACING;
+      const totalHeight = (maxHandles - 1) * handleSpacing;
+      startPosition = HEADER_HEIGHT + VERTICAL_PADDING + ((USABLE_HEIGHT - totalHeight) / 2);
+    } else if (handleSpacing > MAX_SPACING) {
+      // Few handles - use max spacing for better aesthetics
+      handleSpacing = MAX_SPACING;
+      const totalHeight = (maxHandles - 1) * handleSpacing;
+      startPosition = HEADER_HEIGHT + VERTICAL_PADDING + ((USABLE_HEIGHT - totalHeight) / 2);
+    } else {
+      // Perfect fit - distribute evenly from top of usable area
+      startPosition = HEADER_HEIGHT + VERTICAL_PADDING;
+    }
+  }
+
   // Check if this node has compatible handles during connection preview
   const isConnectionTarget = connectionPreview && connectionPreview.compatibleTargets.some(
     target => target.nodeId === id
@@ -160,7 +206,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                 isCompatible ? 'animate-pulse ring-2 ring-green-400' : ''
               }`}
               style={{ 
-                top: 70 + (index * 24),
+                top: startPosition + (index * handleSpacing),
                 backgroundColor: isCompatible ? '#10b981' : moduleDefinition.color,
                 transform: isCompatible ? 'scale(1.2)' : 'scale(1)'
               }}
@@ -234,7 +280,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             id={key}
             className="w-4 h-4 border-2 border-white shadow-md"
             style={{ 
-              top: 70 + (index * 24),
+              top: startPosition + (index * handleSpacing),
               backgroundColor: moduleDefinition.color
             }}
           />
@@ -244,33 +290,33 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
       {/* Handle Labels */}
       {(isSelected || isConnectionTarget) && (
         <>
-          <div className="absolute left-[-120px] text-xs text-gray-600" style={{ top: 55 }}>
-            {inputKeys.map((key, index) => {
-              const isCompatible = compatibleHandles.includes(key);
-              return (
-                <div 
-                  key={key} 
-                  className={`px-2 py-1 rounded shadow border text-right mb-1 transition-all duration-200 ${
-                    isCompatible ? 'bg-green-100 border-green-400 text-green-800 font-semibold animate-pulse' : 'bg-white'
-                  }`}
-                  style={{ marginBottom: index < inputKeys.length - 1 ? '19px' : '0px' }}
-                >
-                  {key.replace(/_/g, " ")}
-                </div>
-              );
-            })}
-          </div>
-          <div className="absolute right-[-120px] text-xs text-gray-600" style={{ top: 55 }}>
-            {outputKeys.map((key, index) => (
+          {inputKeys.map((key, index) => {
+            const isCompatible = compatibleHandles.includes(key);
+            return (
               <div 
                 key={key} 
-                className="bg-white px-2 py-1 rounded shadow border"
-                style={{ marginBottom: index < outputKeys.length - 1 ? '19px' : '0px' }}
+                className={`absolute left-[-120px] text-xs text-gray-600 px-2 py-1 rounded shadow border text-right transition-all duration-200 ${
+                  isCompatible ? 'bg-green-100 border-green-400 text-green-800 font-semibold animate-pulse' : 'bg-white'
+                }`}
+                style={{ 
+                  top: `${startPosition + (index * handleSpacing) - 12}px`,
+                }}
               >
                 {key.replace(/_/g, " ")}
               </div>
-            ))}
-          </div>
+            );
+          })}
+          {outputKeys.map((key, index) => (
+            <div 
+              key={key} 
+              className="absolute right-[-120px] text-xs text-gray-600 bg-white px-2 py-1 rounded shadow border"
+              style={{ 
+                top: `${startPosition + (index * handleSpacing) - 12}px`,
+              }}
+            >
+              {key.replace(/_/g, " ")}
+            </div>
+          ))}
         </>
       )}
     </div>
