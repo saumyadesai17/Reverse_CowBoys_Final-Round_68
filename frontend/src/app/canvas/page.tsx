@@ -3,7 +3,13 @@
 import { CampaignCanvas } from "@/components/workflow/CampaignCanvas";
 import { useState, useEffect, useRef } from "react";
 import { Node, Edge } from "@xyflow/react";
+import { 
+  generateWorkflowFromCampaignResponse, 
+  getStoredCampaignResponse,
+  clearStoredCampaignResponse 
+} from "@/lib/backendWorkflowGenerator";
 import { generateWorkflowFromBrief } from "@/lib/workflowGenerator";
+import { testNodeSpacing } from "@/lib/nodeSpacingTest";
 import { Network, Sparkles, Home, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -98,23 +104,43 @@ export default function CanvasPage() {
   }, []);
 
   useEffect(() => {
-    // Get the campaign brief from sessionStorage
-    const brief = sessionStorage.getItem("campaignBrief");
+    // Try to get campaign response from backend generator first
+    const campaignResponse = getStoredCampaignResponse();
     
-    if (brief) {
-      // Simulate loading
-      setTimeout(() => {
-        // Generate workflow from brief
-        const { nodes: generatedNodes, edges: generatedEdges } = generateWorkflowFromBrief(brief);
-        setNodes(generatedNodes);
-        setEdges(generatedEdges);
-        setIsLoading(false);
-        
-        // Clear the brief from sessionStorage
-        sessionStorage.removeItem("campaignBrief");
-      }, 1500);
-    } else {
+    if (campaignResponse) {
+      // Generate workflow from backend response
+      const { nodes: generatedNodes, edges: generatedEdges } = generateWorkflowFromCampaignResponse(campaignResponse);
+      setNodes(generatedNodes);
+      setEdges(generatedEdges);
+      
+      // Test node spacing in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log("🔍 Testing node spacing for generated workflow...");
+        testNodeSpacing();
+      }
+      
+      // Clear stored response
+      clearStoredCampaignResponse();
       setIsLoading(false);
+    } else {
+      // Fallback: check for legacy campaign brief
+      const brief = sessionStorage.getItem("campaignBrief");
+      
+      if (brief) {
+        // Simulate loading with brief
+        setTimeout(() => {
+          // Generate workflow from brief using fallback method
+          const { nodes: generatedNodes, edges: generatedEdges } = generateWorkflowFromBrief(brief);
+          setNodes(generatedNodes);
+          setEdges(generatedEdges);
+          
+          // Clear the brief from sessionStorage
+          sessionStorage.removeItem("campaignBrief");
+          setIsLoading(false);
+        }, 1500);
+      } else {
+        setIsLoading(false);
+      }
     }
   }, []);
 

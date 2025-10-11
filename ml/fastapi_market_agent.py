@@ -31,6 +31,12 @@ from audience_intelligence_analyzer import (
     AudienceIntelligenceResponse,
     analyze_audience_intelligence
 )
+from copy_content_generator import generate_social_content
+from campaign_timeline_optimizer import (
+    CampaignTimelineRequest,
+    CampaignTimelineResponse,
+    optimize_campaign_timeline
+)
 
 # Load environment variables
 load_dotenv()
@@ -451,6 +457,32 @@ class GenerationMetadata(BaseModel):
 class VisualAssetResponse(BaseModel):
     outputs: Dict[str, Any] = Field(..., description="Generated outputs")
     generation_metadata: GenerationMetadata = Field(..., description="Generation metadata")
+    execution_status: str = Field(..., description="Execution status")
+
+# Copy Content Generator Models
+class CopyContentRequest(BaseModel):
+    content_purpose: List[str] = Field(..., description="Content purpose options")
+    campaign_brief: str = Field(..., description="Campaign brief")
+    tone_of_voice: List[str] = Field(..., description="Tone of voice options")
+    target_audience: TargetAudience = Field(..., description="Target audience")
+    word_count_range: WordCountRange = Field(..., description="Word count range")
+    keywords: Optional[List[str]] = Field(None, description="Keywords")
+    call_to_action: Optional[str] = Field(None, description="Call to action")
+    variations: int = Field(1, description="Number of variations")
+
+class GeneratedCopyResponse(BaseModel):
+    copy_text: str = Field(..., description="Generated content text")
+    copy_id: str = Field(..., description="Unique identifier for the copy")
+    word_count: int = Field(..., description="Actual word count")
+    hashtags: List[str] = Field(..., description="Best hashtags")
+    emojis: List[str] = Field(..., description="Best emojis")
+
+class SEOMetadata(BaseModel):
+    keyword_density: Dict[str, float] = Field(..., description="Keyword density analysis")
+    readability_score: float = Field(..., description="Readability score")
+
+class CopyContentResponse(BaseModel):
+    outputs: Dict[str, Any] = Field(..., description="Generated outputs")
     execution_status: str = Field(..., description="Execution status")
 
 # FastAPI App Setup
@@ -1411,6 +1443,165 @@ async def analyze_audience(request: AudienceIntelligenceRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analyzing audience intelligence: {str(e)}")
+
+@app.post("/copy_content_generator", response_model=CopyContentResponse)
+async def generate_copy_content(request: CopyContentRequest):
+    """
+    Generate marketing copy content using AI
+    
+    This endpoint generates various types of marketing content including:
+    - Social media captions
+    - Ad copy
+    - Blog posts
+    - Email content
+    - Educational content
+    
+    Uses LLM-powered content generation with SEO optimization.
+    """
+    try:
+        print(f"📝 Generating copy content for: {request.campaign_brief}")
+        print(f"🎯 Content purposes: {request.content_purpose}")
+        print(f"🎨 Tone of voice: {request.tone_of_voice}")
+        
+        # Generate content for each purpose
+        all_generated_copies = []
+        
+        for content_type in request.content_purpose:
+            for tone in request.tone_of_voice:
+                try:
+                    # Prepare target audience data
+                    target_audience_data = {
+                        "demographics": request.target_audience.demographics or "General audience",
+                        "psychographics": request.target_audience.psychographics or "General interests",
+                        "pain_points": request.target_audience.pain_points or ["General concerns"]
+                    }
+                    
+                    # Generate content using the copy_content_generator
+                    result = generate_social_content(
+                        content_type=content_type,
+                        campaign_brief=request.campaign_brief,
+                        tone_of_voice=tone,
+                        target_audience=target_audience_data,
+                        word_count_range={
+                            "min": request.word_count_range.min or 50,
+                            "max": request.word_count_range.max or 150
+                        }
+                    )
+                    
+                    # Process generated copies
+                    if "generated_copies" in result:
+                        for copy_data in result["generated_copies"]:
+                            # Add keywords and CTA if provided
+                            copy_text = copy_data.get("copy_text", "")
+                            
+                            # Enhance copy with keywords if provided
+                            if request.keywords:
+                                keyword_text = ", ".join(request.keywords[:3])  # Use top 3 keywords
+                                copy_text += f" {keyword_text}"
+                            
+                            # Add call to action if provided
+                            if request.call_to_action:
+                                copy_text += f" {request.call_to_action}"
+                            
+                            # Create response object
+                            copy_response = GeneratedCopyResponse(
+                                copy_text=copy_text,
+                                copy_id=f"{content_type}_{tone}_{len(all_generated_copies) + 1}",
+                                word_count=len(copy_text.split()),
+                                hashtags=copy_data.get("hashtags", []),
+                                emojis=copy_data.get("emojis", [])
+                            )
+                            
+                            all_generated_copies.append(copy_response)
+                            
+                            # Limit variations if specified
+                            if len(all_generated_copies) >= request.variations:
+                                break
+                    
+                    if len(all_generated_copies) >= request.variations:
+                        break
+                        
+                except Exception as e:
+                    print(f"Error generating {content_type} with {tone} tone: {e}")
+                    continue
+        
+        # Calculate SEO metadata
+        seo_metadata = calculate_seo_metadata(all_generated_copies, request.keywords)
+        
+        # Create response
+        response = CopyContentResponse(
+            outputs={
+                "generated_copies": all_generated_copies,
+                "seo_metadata": seo_metadata
+            },
+            execution_status="success" if all_generated_copies else "failed"
+        )
+        
+        print(f"✅ Generated {len(all_generated_copies)} copy variations")
+        return response
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating copy content: {str(e)}")
+
+def calculate_seo_metadata(copies: List[GeneratedCopyResponse], keywords: Optional[List[str]]) -> SEOMetadata:
+    """Calculate SEO metadata for generated copies"""
+    
+    if not copies:
+        return SEOMetadata(
+            keyword_density={},
+            readability_score=0.0
+        )
+    
+    # Calculate keyword density
+    keyword_density = {}
+    if keywords:
+        all_text = " ".join([copy.copy_text.lower() for copy in copies])
+        total_words = len(all_text.split())
+        
+        for keyword in keywords:
+            keyword_count = all_text.count(keyword.lower())
+            density = (keyword_count / total_words) * 100 if total_words > 0 else 0
+            keyword_density[keyword] = round(density, 2)
+    
+    # Calculate average readability score (simplified)
+    avg_word_count = sum(len(copy.copy_text.split()) for copy in copies) / len(copies)
+    readability_score = min(100, max(0, 100 - (avg_word_count - 50) * 0.5))
+    
+    return SEOMetadata(
+        keyword_density=keyword_density,
+        readability_score=round(readability_score, 1)
+    )
+
+@app.post("/campaign_timeline_optimizer", response_model=CampaignTimelineResponse)
+async def optimize_timeline(request: CampaignTimelineRequest):
+    """
+    Optimize campaign timeline using AI-powered scheduling
+    
+    This endpoint creates strategic campaign timelines including:
+    - Real-time date analysis and event detection
+    - Audience behavior pattern analysis
+    - Platform-specific optimal posting times
+    - Content distribution scheduling
+    - Budget-aware timeline optimization
+    - Engagement maximization strategies
+    
+    Uses LLM-powered analysis with web search capabilities.
+    """
+    try:
+        print(f"📅 Optimizing campaign timeline from {request.campaign_duration.start_date} to {request.campaign_duration.end_date}")
+        print(f"🎯 Audience segments: {request.audience_segments}")
+        print(f"📱 Content inventory: {len(request.content_inventory)} items")
+        
+        # Call the campaign timeline optimizer
+        result = optimize_campaign_timeline(request)
+        
+        print(f"✅ Timeline optimization completed with status: {result.execution_status}")
+        print(f"📊 Generated {len(result.outputs.get('optimized_timeline', []))} timeline slots")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error optimizing campaign timeline: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -21,6 +21,45 @@ interface GenericModuleNodeProps extends NodeProps {
   };
 }
 
+// Helper function to ensure values are compatible with input types
+const getSafeValue = (value: any, inputType: string): string => {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  
+  switch (inputType) {
+    case "string":
+      if (Array.isArray(value)) {
+        return value.length > 0 ? String(value[0]) : "";
+      }
+      return String(value);
+    
+    case "integer":
+      if (Array.isArray(value)) {
+        return value.length > 0 ? String(value[0]) : "0";
+      }
+      return String(value);
+    
+    case "enum":
+      if (Array.isArray(value)) {
+        return value.length > 0 ? String(value[0]) : "";
+      }
+      return String(value);
+    
+    case "boolean":
+      if (Array.isArray(value)) {
+        return value.length > 0 ? String(Boolean(value[0])) : "false";
+      }
+      return String(Boolean(value));
+    
+    default:
+      if (Array.isArray(value)) {
+        return value.length > 0 ? String(value[0]) : "";
+      }
+      return String(value);
+  }
+};
+
 export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => {
   const { selectedNodeId, updateModule, connectionPreview } = useCampaignStore();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -46,14 +85,22 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
   };
 
   const renderInputField = (inputKey: string, inputDef: any) => {
-    const value = inputs[inputKey] || inputDef.default || "";
+    let value = inputs[inputKey];
+    
+    // Handle default values
+    if (value === undefined || value === null) {
+      value = inputDef.default || "";
+    }
+    
+    // Ensure value is compatible with the input type
+    const safeValue = getSafeValue(value, inputDef.type);
 
     switch (inputDef.type) {
       case "string":
         return (
           <Input
             key={inputKey}
-            value={value}
+            value={safeValue}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateInput(inputKey, e.target.value)}
             placeholder={inputDef.description || `Enter ${inputKey}`}
             className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
@@ -67,7 +114,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             type="number"
             min={inputDef.min}
             max={inputDef.max}
-            value={value}
+            value={safeValue}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateInput(inputKey, parseInt(e.target.value) || 0)}
             className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
           />
@@ -77,7 +124,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
         return (
           <Select 
             key={inputKey}
-            value={value} 
+            value={safeValue} 
             onValueChange={(selectedValue: string) => updateInput(inputKey, selectedValue)}
           >
             <SelectTrigger className="text-xs bg-slate-700/50 border-slate-600 text-white focus:border-violet-500">
@@ -97,7 +144,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
         return (
           <Select 
             key={inputKey}
-            value={value?.toString()} 
+            value={safeValue} 
             onValueChange={(selectedValue: string) => updateInput(inputKey, selectedValue === "true")}
           >
             <SelectTrigger className="text-xs bg-slate-700/50 border-slate-600 text-white focus:border-violet-500">
