@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -22,6 +23,29 @@ interface OutputViewerProps {
 
 export function OutputViewer({ moduleName, result, onClose }: OutputViewerProps) {
   const [activeTab, setActiveTab] = useState<string>("outputs");
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // Handle Escape key and set initial focus
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    // Try to focus close button for accessibility
+    closeBtnRef.current?.focus();
+
+    // Prevent background scroll while modal is open
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
 
   const renderVisualAssetOutput = (outputs: any) => {
     if (outputs.generated_images && Array.isArray(outputs.generated_images)) {
@@ -244,13 +268,27 @@ export function OutputViewer({ moduleName, result, onClose }: OutputViewerProps)
     { id: 'metadata', label: 'Metadata', icon: FileText },
   ];
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+  const headingId = "output-viewer-title";
+
+  const modalContent = (
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+      aria-hidden="true"
+    >
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        className="bg-slate-900 border border-slate-700 rounded-xl w-[90%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+        tabIndex={-1}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-700">
           <div>
-            <h2 className="text-xl font-bold text-white">
+            <h2 id={headingId} className="text-xl font-bold text-white">
               {moduleName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Output
             </h2>
             <p className="text-slate-400 text-sm">
@@ -266,6 +304,7 @@ export function OutputViewer({ moduleName, result, onClose }: OutputViewerProps)
             size="sm"
             onClick={onClose}
             className="text-slate-400 hover:text-white"
+            ref={closeBtnRef}
           >
             <X className="w-5 h-5" />
           </Button>
@@ -327,4 +366,7 @@ export function OutputViewer({ moduleName, result, onClose }: OutputViewerProps)
       </div>
     </div>
   );
+
+  // Render via portal to escape any React Flow node clipping/stacking context
+  return typeof window !== "undefined" ? createPortal(modalContent, document.body) : null;
 }

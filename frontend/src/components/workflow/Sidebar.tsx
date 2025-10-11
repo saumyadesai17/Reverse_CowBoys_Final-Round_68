@@ -55,25 +55,34 @@ const categories = ["All", ...Object.keys(MODULE_CATEGORIES)];
 interface SidebarProps {
   onAddModule?: (moduleId: string) => void;
   onRunCampaign?: () => void;
+  onRunWorkflow?: () => Promise<void>;
+  isExecutingWorkflow?: boolean;
+  executionProgress?: { completed: number; total: number };
+  nodesCount?: number;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }
 
-export function Sidebar({ onAddModule, onRunCampaign, isCollapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ 
+  onAddModule, 
+  onRunCampaign, 
+  onRunWorkflow, 
+  isExecutingWorkflow = false, 
+  executionProgress = { completed: 0, total: 0 },
+  nodesCount = 0,
+  isCollapsed = false, 
+  onToggleCollapse 
+}: SidebarProps) {
   const [selectedCategory, setSelectedCategory] = React.useState("All");
-  const [isRunning, setIsRunning] = React.useState(false);
 
   const filteredModules = availableModules.filter(module => 
     selectedCategory === "All" || module.category === selectedCategory
   );
 
   const handleRunWorkflow = () => {
-    setIsRunning(true);
-    // Simulate workflow execution and then show calendar
-    setTimeout(() => {
-      setIsRunning(false);
-      onRunCampaign?.();
-    }, 2000);
+    if (onRunWorkflow) {
+      onRunWorkflow();
+    }
   };
 
   const handleAddToCanvas = (moduleId: string) => {
@@ -125,12 +134,12 @@ export function Sidebar({ onAddModule, onRunCampaign, isCollapsed = false, onTog
         <CardContent className="space-y-2">
           <Button 
             onClick={handleRunWorkflow}
-            disabled={isRunning}
+            disabled={isExecutingWorkflow || nodesCount === 0}
             className="w-full"
             size="sm"
           >
             <Play className="w-4 h-4 mr-2" />
-            {isRunning ? "Running..." : "Run Campaign"}
+            {isExecutingWorkflow ? `Running... (${executionProgress.completed}/${executionProgress.total})` : "Run Campaign"}
           </Button>
           <Button variant="outline" size="sm" className="w-full">
             <Settings className="w-4 h-4 mr-2" />
@@ -199,7 +208,7 @@ export function Sidebar({ onAddModule, onRunCampaign, isCollapsed = false, onTog
       {/* Status */}
       <div className="text-xs text-gray-500 space-y-1">
         <div>Modules: {filteredModules.length}</div>
-        <div>Status: {isRunning ? "Running" : "Ready"}</div>
+        <div>Status: {isExecutingWorkflow ? "Running" : "Ready"}</div>
       </div>
     </div>
   );

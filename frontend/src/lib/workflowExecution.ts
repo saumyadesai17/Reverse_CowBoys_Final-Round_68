@@ -69,20 +69,42 @@ export class WorkflowExecutionService {
         };
         
       case 'copy_content_generator':
+        // Ensure keywords is always an array
+        const ensureKeywordsArray = (keywords: any): string[] => {
+          if (!keywords) return [];
+          if (Array.isArray(keywords)) return keywords;
+          if (typeof keywords === 'string') return [keywords];
+          return [];
+        };
+        
+        // Ensure pain_points is always an array
+        const ensurePainPointsArray = (painPoints: any): string[] => {
+          if (!painPoints) return [];
+          if (Array.isArray(painPoints)) return painPoints;
+          if (typeof painPoints === 'string') return [painPoints];
+          return [];
+        };
+        
         return {
           content_purpose: Array.isArray(inputs.content_purpose) ? inputs.content_purpose : [inputs.content_purpose || "social_caption"],
           campaign_brief: inputs.campaign_brief || 'Generate marketing content',
           tone_of_voice: Array.isArray(inputs.tone_of_voice) ? inputs.tone_of_voice : [inputs.tone_of_voice || "professional"],
-          target_audience: inputs.target_audience || {
+          target_audience: inputs.target_audience ? {
+            product_description: inputs.target_audience.product_description || "Product description",
+            demographics: inputs.target_audience.demographics || "General audience",
+            psychographics: inputs.target_audience.psychographics || "Value-conscious consumers",
+            pain_points: ensurePainPointsArray(inputs.target_audience.pain_points)
+          } : {
             product_description: "Product description",
             demographics: "General audience",
-            psychographics: "Value-conscious consumers"
+            psychographics: "Value-conscious consumers",
+            pain_points: []
           },
           word_count_range: inputs.word_count_range || {
             min: 50,
             max: 150
           },
-          keywords: inputs.keywords || [],
+          keywords: ensureKeywordsArray(inputs.keywords),
           call_to_action: inputs.call_to_action || "Learn more",
           variations: inputs.variations || 1
         };

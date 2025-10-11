@@ -374,32 +374,6 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
           
           {/* Control Buttons */}
           <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
-            {/* Run Campaign Button */}
-            <button
-              onClick={handleRunWorkflow}
-              disabled={nodes.length === 0}
-              className={`bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 transition-colors ${
-                isExecutingWorkflow 
-                  ? 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100' 
-                  : 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100'
-              } ${
-                nodes.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              title={isExecutingWorkflow ? 'Stop Campaign Execution' : 'Run Campaign Workflow'}
-            >
-              {isExecutingWorkflow ? (
-                <>
-                  <Square className="w-4 h-4" />
-                  Stop ({executionProgress.completed}/{executionProgress.total})
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" />
-                  Run Campaign
-                </>
-              )}
-            </button>
-            
             {/* Minimap Toggle Button */}
             <button
               onClick={() => setIsMinimapCollapsed(!isMinimapCollapsed)}
@@ -417,6 +391,10 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
         <Sidebar 
           onAddModule={handleAddModule}
           onRunCampaign={() => setShowCalendar(true)}
+          onRunWorkflow={handleRunWorkflow}
+          isExecutingWorkflow={isExecutingWorkflow}
+          executionProgress={executionProgress}
+          nodesCount={nodes.length}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
