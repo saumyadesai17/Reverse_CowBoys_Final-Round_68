@@ -13,6 +13,8 @@ import os
 import asyncio
 import json
 import re
+import time
+import hashlib
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -31,6 +33,66 @@ os.environ["EXA_API_KEY"] = os.getenv("EXA_API_KEY")
 
 # Global agent instance
 agent = None
+
+# Cache for API responses to reduce rate limiting
+response_cache: Dict[str, Dict[str, Any]] = {}
+CACHE_DURATION = 3600  # 1 hour cache
+
+# Rate limit tracking
+rate_limit_tracker = {
+    "exa_last_reset": 0,
+    "firecrawl_last_reset": 0,
+    "exa_requests_count": 0,
+    "firecrawl_requests_count": 0
+}
+
+def get_cache_key(prompt: str) -> str:
+    """Generate cache key for prompt"""
+    return hashlib.md5(prompt.encode()).hexdigest()
+
+def is_cache_valid(cache_entry: Dict[str, Any]) -> bool:
+    """Check if cache entry is still valid"""
+    if not cache_entry:
+        return False
+    cache_time = cache_entry.get("timestamp", 0)
+    return time.time() - cache_time < CACHE_DURATION
+
+async def retry_with_backoff(func, max_retries: int = 3, base_delay: float = 1.0):
+    """Retry function with exponential backoff"""
+    for attempt in range(max_retries):
+        try:
+            return await func() if asyncio.iscoroutinefunction(func) else func()
+        except Exception as e:
+            if "429" in str(e) or "Too Many Requests" in str(e):
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    print(f"Rate limited, retrying in {delay} seconds... (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(delay)
+                    continue
+            raise e
+    raise Exception("Max retries exceeded")
+
+def check_rate_limits() -> Dict[str, bool]:
+    """Check if we're within rate limits"""
+    current_time = time.time()
+    
+    # Reset counters every hour
+    if current_time - rate_limit_tracker["exa_last_reset"] > 3600:
+        rate_limit_tracker["exa_requests_count"] = 0
+        rate_limit_tracker["exa_last_reset"] = current_time
+    
+    if current_time - rate_limit_tracker["firecrawl_last_reset"] > 3600:
+        rate_limit_tracker["firecrawl_requests_count"] = 0
+        rate_limit_tracker["firecrawl_last_reset"] = current_time
+    
+    # Conservative limits (adjust based on your API quotas)
+    exa_limit = 50  # requests per hour
+    firecrawl_limit = 100  # requests per hour
+    
+    return {
+        "exa_available": rate_limit_tracker["exa_requests_count"] < exa_limit,
+        "firecrawl_available": rate_limit_tracker["firecrawl_requests_count"] < firecrawl_limit
+    }
 
 def calculate_start_date(days: int) -> str:
     """Calculate start date based on number of days."""
@@ -1042,7 +1104,22 @@ async def create_quick_campaign(request: QuickCampaignRequest):
         raise HTTPException(status_code=503, detail="Agent not initialized")
     
     try:
-        # Generate comprehensive strategy plan using agent
+        # Check cache first
+        cache_key = get_cache_key(request.brief)
+        cached_response = response_cache.get(cache_key)
+        
+        if cached_response and is_cache_valid(cached_response):
+            print("Using cached response to avoid rate limits")
+            return CampaignResponse(**cached_response["data"])
+        
+        # Check rate limits before making API calls
+        rate_limits = check_rate_limits()
+        
+        if not rate_limits["exa_available"] and not rate_limits["firecrawl_available"]:
+            print("Rate limits exceeded, using fallback strategy...")
+            raise Exception("Rate limit exceeded - using fallback")
+        
+        # Generate comprehensive strategy plan using agent with retry logic
         strategy_prompt = f"""
         Create a comprehensive social media campaign strategy plan based on this brief:
         "{request.brief}"
@@ -1069,11 +1146,22 @@ async def create_quick_campaign(request: QuickCampaignRequest):
         Base your recommendations on actual data gathered from tool calls, not assumptions.
         """
         
-        response = agent.run(strategy_prompt)
+        # Use retry logic for agent calls
+        async def run_agent():
+            return agent.run(strategy_prompt)
+        
+        response = await retry_with_backoff(run_agent)
         strategy_plan = response.content if hasattr(response, 'content') else str(response)
         
-        # Extract module configurations using LLM
-        module_configurations = extract_module_configurations(request.brief, agent)
+        # Update rate limit counters
+        rate_limit_tracker["exa_requests_count"] += 1
+        rate_limit_tracker["firecrawl_requests_count"] += 1
+        
+        # Extract module configurations using LLM with retry
+        async def extract_configs():
+            return extract_module_configurations(request.brief, agent)
+        
+        module_configurations = await retry_with_backoff(extract_configs)
         
         # Get module connections
         module_connections = get_module_connections()
@@ -1081,7 +1169,7 @@ async def create_quick_campaign(request: QuickCampaignRequest):
         # Extract sources
         sources = ["ExaTools research", "FirecrawlTools scraping"]
         
-        return CampaignResponse(
+        response_data = CampaignResponse(
             campaign_brief=request.brief,
             strategy_plan=strategy_plan,
             research_summary="Research conducted using ExaTools and FirecrawlTools with comprehensive field extraction",
@@ -1089,6 +1177,14 @@ async def create_quick_campaign(request: QuickCampaignRequest):
             module_configurations=module_configurations,
             module_connections=module_connections
         )
+        
+        # Cache the response
+        response_cache[cache_key] = {
+            "data": response_data.dict(),
+            "timestamp": time.time()
+        }
+        
+        return response_data
         
     except Exception as e:
         # Check if it's a rate limiting error
@@ -1192,6 +1288,38 @@ async def get_agent_config():
             "Timeline planning"
         ]
     }
+
+@app.get("/rate-limits")
+async def get_rate_limit_status():
+    """Get current rate limit status"""
+    rate_limits = check_rate_limits()
+    current_time = time.time()
+    
+    return {
+        "exa_status": {
+            "available": rate_limits["exa_available"],
+            "requests_count": rate_limit_tracker["exa_requests_count"],
+            "last_reset": rate_limit_tracker["exa_last_reset"],
+            "time_until_reset": max(0, 3600 - (current_time - rate_limit_tracker["exa_last_reset"]))
+        },
+        "firecrawl_status": {
+            "available": rate_limits["firecrawl_available"],
+            "requests_count": rate_limit_tracker["firecrawl_requests_count"],
+            "last_reset": rate_limit_tracker["firecrawl_last_reset"],
+            "time_until_reset": max(0, 3600 - (current_time - rate_limit_tracker["firecrawl_last_reset"]))
+        },
+        "cache_status": {
+            "cached_responses": len(response_cache),
+            "cache_duration_hours": CACHE_DURATION / 3600
+        }
+    }
+
+@app.post("/clear-cache")
+async def clear_cache():
+    """Clear response cache"""
+    global response_cache
+    response_cache.clear()
+    return {"message": "Cache cleared successfully", "timestamp": datetime.now()}
 
 @app.get("/module/connections")
 async def get_module_connections_endpoint():
