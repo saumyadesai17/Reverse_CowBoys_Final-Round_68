@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -31,76 +31,10 @@ const nodeTypes = {
   input: InputNode,
 };
 
-const initialNodes: Node[] = [
-  {
-    id: "input-1",
-    type: "input",
-    position: { x: 100, y: 100 },
-    data: { 
-      label: "Campaign Brief",
-      value: "",
-      description: "Enter your marketing brief here"
-    },
-  },
-  {
-    id: "visual-1", 
-    type: "module",
-    position: { x: 400, y: 150 },
-    data: {
-      id: "HY82394HQG",
-      isActive: true,
-      module_name: "visual_asset_generator",
-      inputs: {
-        prompt: "",
-        quantity: 1,
-        image_style: "photorealistic",
-        dimensions: { width: 1024, height: 1024 }
-      }
-    },
-  },
-  {
-    id: "audience-1", 
-    type: "module",
-    position: { x: 150, y: 300 },
-    data: {
-      id: "HY82394HGG",
-      isActive: true,
-      module_name: "audience_intelligence_analyzer",
-      inputs: {
-        product_category: "",
-        geographic_location: { country: "", city: "", region: "" },
-        campaign_objective: ""
-      }
-    },
-  },
-  {
-    id: "copy-1", 
-    type: "module",
-    position: { x: 400, y: 350 },
-    data: {
-      id: "HY82394HGH",
-      isActive: true,
-      module_name: "copy_content_generator",
-      inputs: {
-        content_purpose: "social_caption",
-        campaign_brief: "",
-        tone_of_voice: "professional",
-        target_audience: {}
-      }
-    },
-  },
-  {
-    id: "output-1",
-    type: "output", 
-    position: { x: 700, y: 250 },
-    data: {
-      label: "Campaign Assets",
-      results: []
-    },
-  },
-];
-
-const initialEdges: Edge[] = [];
+interface CampaignCanvasProps {
+  initialNodes?: Node[];
+  initialEdges?: Edge[];
+}
 
 // Default edge options for better interaction and visual feedback
 const defaultEdgeOptions = {
@@ -112,7 +46,7 @@ const defaultEdgeOptions = {
   type: 'smoothstep',
 };
 
-export function CampaignCanvas() {
+export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: CampaignCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [reactFlowInstance, setReactFlowInstance] = React.useState<any>(null);
@@ -120,6 +54,19 @@ export function CampaignCanvas() {
   const [isMinimapCollapsed, setIsMinimapCollapsed] = React.useState(false);
   const [showCalendar, setShowCalendar] = React.useState(false);
   const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview } = useCampaignStore();
+
+  // Update nodes and edges when props change
+  useEffect(() => {
+    if (initialNodes.length > 0) {
+      setNodes(initialNodes);
+    }
+  }, [initialNodes, setNodes]);
+
+  useEffect(() => {
+    if (initialEdges.length > 0) {
+      setEdges(initialEdges);
+    }
+  }, [initialEdges, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => {

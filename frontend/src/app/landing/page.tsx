@@ -298,7 +298,7 @@ export default function LandingPage() {
           </p>
 
           <div className="hero-cta flex items-center justify-center space-x-4">
-            <Link href="/auth/signup">
+            <Link href="/brief">
               <Button size="lg" className="bg-violet-600 hover:bg-violet-700 text-white text-lg px-8 py-6">
                 Start Building Free
                 <ArrowRight className="ml-2 w-5 h-5" />
