@@ -15,10 +15,13 @@ import {
   MessageSquare,
   Image as ImageIcon,
   Calendar,
-  CheckCircle
+  CheckCircle,
+  AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 import { gsap } from "gsap";
+import { CampaignApiService, CampaignResponse } from "@/lib/campaignApi";
+import { storeCampaignResponse } from "@/lib/backendWorkflowGenerator";
 
 const exampleBriefs = [
   {
@@ -70,6 +73,7 @@ export default function BriefPage() {
   const [thinkingText, setThinkingText] = useState("");
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [activeFeature, setActiveFeature] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -211,6 +215,7 @@ export default function BriefPage() {
 
     setIsGenerating(true);
     setCompletedSteps([]);
+    setError(null);
     let currentStep = 0;
 
     const thinkingInterval = setInterval(() => {
@@ -221,17 +226,31 @@ export default function BriefPage() {
       }
     }, 800);
 
-    // Simulate workflow generation (replace with actual API call)
-    setTimeout(() => {
+    try {
+      // Call the backend API to generate campaign
+      const campaignResponse = await CampaignApiService.createQuickCampaign(brief);
+      
+      // Complete all thinking steps
       clearInterval(thinkingInterval);
+      setCompletedSteps([0, 1, 2, 3, 4, 5]);
+      setThinkingText("Campaign workflow generated successfully!");
+      
+      // Store the campaign response for the canvas
+      storeCampaignResponse(campaignResponse);
+      
+      // Wait a moment for visual feedback
+      setTimeout(() => {
+        setIsGenerating(false);
+        // Navigate to canvas
+        router.push("/canvas");
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Error generating campaign:", error);
+      clearInterval(thinkingInterval);
+      setError("Failed to generate campaign. Please check your backend connection and try again.");
       setIsGenerating(false);
-      
-      // Store the brief in sessionStorage to pass to canvas
-      sessionStorage.setItem("campaignBrief", brief);
-      
-      // Navigate to canvas
-      router.push("/canvas");
-    }, 5000);
+    }
   };
 
   const fillExample = (exampleBrief: string) => {
@@ -319,6 +338,19 @@ export default function BriefPage() {
                   </Button>
                 </div>
               </Card>
+
+              {/* Error Display */}
+              {error && (
+                <Card className="bg-red-900/30 border-red-500/50 p-4 mb-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="text-red-200 font-medium mb-1">Generation Failed</h3>
+                      <p className="text-red-300 text-sm">{error}</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
 
             {/* Right Column - Example Briefs or Thinking Process */}
