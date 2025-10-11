@@ -94,7 +94,7 @@ export function Sidebar({ onAddModule, isCollapsed = false, onToggleCollapse }: 
   }
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 p-4 space-y-4">
+    <div className="w-80 h-[98%] overflow-auto bg-white border-l border-gray-200 p-4 space-y-4">
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -132,27 +132,6 @@ export function Sidebar({ onAddModule, isCollapsed = false, onToggleCollapse }: 
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Module Categories */}
-      <Card>
-        <CardHeader className="pb-3">
-          <h3 className="font-medium text-sm">Module Categories</h3>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <Badge
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                className="cursor-pointer text-xs"
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category}
-              </Badge>
-            ))}
-          </div>
         </CardContent>
       </Card>
 
