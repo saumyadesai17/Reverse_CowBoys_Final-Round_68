@@ -20,7 +20,9 @@ import {
   Mic,
   Search,
   MessageSquare,
-  Zap
+  Zap,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { MODULE_DEFINITIONS, MODULE_CATEGORIES } from "@/lib/moduleDefinitions";
 
@@ -50,7 +52,13 @@ const availableModules = Object.entries(MODULE_DEFINITIONS).map(([key, module]) 
 
 const categories = ["All", ...Object.keys(MODULE_CATEGORIES)];
 
-export function Sidebar() {
+interface SidebarProps {
+  onAddModule?: (moduleId: string) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+export function Sidebar({ onAddModule, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const [selectedCategory, setSelectedCategory] = React.useState("All");
   const [isRunning, setIsRunning] = React.useState(false);
 
@@ -64,11 +72,42 @@ export function Sidebar() {
     setTimeout(() => setIsRunning(false), 3000);
   };
 
+  const handleAddToCanvas = (moduleId: string) => {
+    if (onAddModule) {
+      onAddModule(moduleId);
+    }
+  };
+
+  if (isCollapsed) {
+    return (
+      <div className="w-12 bg-white border-l border-gray-200 p-2 flex flex-col items-center">
+        <Button
+          onClick={onToggleCollapse}
+          size="sm"
+          variant="ghost"
+          className="w-8 h-8 p-0"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-80 bg-white border-l border-gray-200 p-4 space-y-4">
       {/* Header */}
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold">Campaign Canvas</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Campaign Canvas</h2>
+          <Button
+            onClick={onToggleCollapse}
+            size="sm"
+            variant="ghost"
+            className="w-8 h-8 p-0"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
         <p className="text-sm text-gray-600">
           Build your AI-powered marketing campaign workflow
         </p>
@@ -154,7 +193,15 @@ export function Sidebar() {
                   </div>
                   <p className="text-xs text-gray-600 mt-1">{module.description}</p>
                   <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button size="sm" variant="outline" className="h-6 text-xs">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-6 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCanvas(module.id);
+                      }}
+                    >
                       <Plus className="w-3 h-3 mr-1" />
                       Add to Canvas
                     </Button>

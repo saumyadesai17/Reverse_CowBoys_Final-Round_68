@@ -4,7 +4,7 @@ import React, { memo, useState } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Play, Pause } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,10 +43,6 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
     const newInputs = { ...inputs, [key]: value };
     setInputs(newInputs);
     updateModule(id, { ...data, inputs: newInputs });
-  };
-
-  const handleExecute = () => {
-    console.log(`Executing ${moduleDefinition.display_name} with inputs:`, inputs);
   };
 
   const renderInputField = (inputKey: string, inputDef: any) => {
@@ -273,21 +269,6 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
               })}
             </div>
           )}
-
-          <div className="flex justify-center pt-2">
-            <Button
-              onClick={handleExecute}
-              size="sm"
-              className="w-20 h-8 rounded-full"
-              style={{ backgroundColor: moduleDefinition.color }}
-            >
-              {data.isActive ? (
-                <><Play className="w-3 h-3 mr-1" /> Execute</>
-              ) : (
-                <><Pause className="w-3 h-3 mr-1" /> Paused</>
-              )}
-            </Button>
-          </div>
         </CardContent>
 
         {/* Output Handles */}

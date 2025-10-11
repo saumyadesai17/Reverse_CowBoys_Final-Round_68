@@ -22,6 +22,7 @@ import { InputNode } from "./nodes/InputNode";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { Sidebar } from "./Sidebar";
 import { MODULE_DEFINITIONS, CONNECTION_MATRIX } from "@/lib/moduleDefinitions";
+import { Eye, EyeOff } from "lucide-react";
 
 const nodeTypes = {
   module: GenericModuleNode,
@@ -104,6 +105,8 @@ export function CampaignCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [reactFlowInstance, setReactFlowInstance] = React.useState<any>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
+  const [isMinimapCollapsed, setIsMinimapCollapsed] = React.useState(false);
   const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview } = useCampaignStore();
 
   const onConnect = useCallback(
@@ -165,6 +168,10 @@ export function CampaignCanvas() {
     setSelectedNodeId(node.id);
   }, [setSelectedNodeId]);
 
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+  }, [setSelectedNodeId]);
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -186,7 +193,7 @@ export function CampaignCanvas() {
       // Use cursor position or center of viewport if no cursor position
       let position;
       if (event.clientX && event.clientY) {
-        position = reactFlowInstance.project({
+        position = reactFlowInstance.screenToFlowPosition({
           x: event.clientX - reactFlowBounds.left,
           y: event.clientY - reactFlowBounds.top,
         });
@@ -266,6 +273,47 @@ export function CampaignCanvas() {
     setConnectionPreview(null);
   }, [setConnectionPreview]);
 
+  const handleAddModule = useCallback((moduleId: string) => {
+    // Get viewport center for new node placement
+    let position = { x: 300, y: 200 }; // Default position
+    
+    if (reactFlowInstance) {
+      const viewport = reactFlowInstance.getViewport();
+      const bounds = document.querySelector('.react-flow')?.getBoundingClientRect();
+      
+      if (bounds) {
+        position = reactFlowInstance.screenToFlowPosition({
+          x: bounds.width / 2,
+          y: bounds.height / 2,
+        });
+      }
+    }
+
+    // Initialize inputs with default values from module definition
+    const moduleDefinition = MODULE_DEFINITIONS[moduleId as keyof typeof MODULE_DEFINITIONS];
+    const initialInputs: Record<string, any> = {};
+    
+    if (moduleDefinition) {
+      Object.entries(moduleDefinition.inputs).forEach(([key, inputDef]: [string, any]) => {
+        initialInputs[key] = inputDef.default || (inputDef.type === 'integer' ? 0 : inputDef.type === 'boolean' ? false : '');
+      });
+    }
+
+    const newNode = {
+      id: `${moduleId}-${Date.now()}`,
+      type: 'module' as const,
+      position,
+      data: {
+        id: `${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        isActive: true,
+        module_name: moduleId,
+        inputs: initialInputs
+      },
+    };
+
+    setNodes((nds) => nds.concat(newNode));
+  }, [reactFlowInstance, setNodes]);
+
   return (
     <div className="h-screen w-full flex overflow-hidden">
       <div className="flex-1 relative h-full">
@@ -276,6 +324,7 @@ export function CampaignCanvas() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
           onConnectStart={onConnectStart}
           onConnectEnd={onConnectEnd}
           onInit={setReactFlowInstance}
@@ -289,27 +338,46 @@ export function CampaignCanvas() {
         >
           <Background />
           <Controls />
-          <MiniMap
-            className="!bg-white"
-            nodeColor={(node) => {
-              switch (node.type) {
-                case "input":
-                  return "#3b82f6";
-                case "module":
-                  if (node.data.module_name && MODULE_DEFINITIONS[node.data.module_name as keyof typeof MODULE_DEFINITIONS]) {
-                    return MODULE_DEFINITIONS[node.data.module_name as keyof typeof MODULE_DEFINITIONS].color;
-                  }
-                  return "#6b7280"; 
-                case "output":
-                  return "#f59e0b";
-                default:
-                  return "#6b7280";
-              }
-            }}
-          />
+          {!isMinimapCollapsed && (
+            <MiniMap
+              className="!bg-white"
+              nodeColor={(node) => {
+                switch (node.type) {
+                  case "input":
+                    return "#3b82f6";
+                  case "module":
+                    if (node.data.module_name && MODULE_DEFINITIONS[node.data.module_name as keyof typeof MODULE_DEFINITIONS]) {
+                      return MODULE_DEFINITIONS[node.data.module_name as keyof typeof MODULE_DEFINITIONS].color;
+                    }
+                    return "#6b7280"; 
+                  case "output":
+                    return "#f59e0b";
+                  default:
+                    return "#6b7280";
+                }
+              }}
+            />
+          )}
         </ReactFlow>
+        
+        {/* Minimap Toggle Button */}
+        <button
+          onClick={() => setIsMinimapCollapsed(!isMinimapCollapsed)}
+          className="absolute bottom-4 right-4 bg-white border border-gray-300 rounded-md p-2 text-xs shadow-sm hover:bg-gray-50 z-10 flex items-center justify-center"
+          title={isMinimapCollapsed ? 'Show Minimap' : 'Hide Minimap'}
+        >
+          {isMinimapCollapsed ? (
+            <Eye className="w-4 h-4" />
+          ) : (
+            <EyeOff className="w-4 h-4" />
+          )}
+        </button>
       </div>
-      <Sidebar />
+      <Sidebar 
+        onAddModule={handleAddModule}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
     </div>
   );
 }
