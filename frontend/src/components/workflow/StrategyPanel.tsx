@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Brain, ChevronDown, ChevronUp, Sparkles, Target, Lightbulb } from "lucide-react";
+import { Brain, ChevronDown, ChevronUp, Sparkles, Target, Lightbulb, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -9,9 +9,10 @@ import remarkGfm from "remark-gfm";
 interface StrategyPanelProps {
   strategyPlan: string;
   isCollapsed?: boolean;
+  onClose?: () => void;
 }
 
-export function StrategyPanel({ strategyPlan, isCollapsed: initialCollapsed = true }: StrategyPanelProps) {
+export function StrategyPanel({ strategyPlan, isCollapsed: initialCollapsed = true, onClose }: StrategyPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
 
   if (!strategyPlan) {
@@ -22,28 +23,41 @@ export function StrategyPanel({ strategyPlan, isCollapsed: initialCollapsed = tr
     <div className="absolute top-4 left-4 z-20 max-w-md">
       <Card className="bg-gradient-to-br from-violet-950/95 to-purple-950/95 backdrop-blur-xl border-violet-500/30 shadow-2xl overflow-hidden">
         {/* Header */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Brain className="w-6 h-6 text-violet-400" />
-              <Sparkles className="w-3 h-3 text-violet-300 absolute -top-1 -right-1 animate-pulse" />
+        <div className="relative">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors pr-16"
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Brain className="w-6 h-6 text-violet-400" />
+                <Sparkles className="w-3 h-3 text-violet-300 absolute -top-1 -right-1 animate-pulse" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  AI Agent's Strategy
+                </h3>
+                <p className="text-xs text-violet-300">Thought process behind this workflow</p>
+              </div>
             </div>
-            <div className="text-left">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                AI Agent's Strategy
-              </h3>
-              <p className="text-xs text-violet-300">Thought process behind this workflow</p>
-            </div>
-          </div>
-          {isCollapsed ? (
-            <ChevronDown className="w-5 h-5 text-violet-400" />
-          ) : (
-            <ChevronUp className="w-5 h-5 text-violet-400" />
+            {isCollapsed ? (
+              <ChevronDown className="w-5 h-5 text-violet-400" />
+            ) : (
+              <ChevronUp className="w-5 h-5 text-violet-400" />
+            )}
+          </button>
+          
+          {/* Close Button */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="absolute top-2 right-2 p-2 rounded-full hover:bg-red-500/20 transition-colors group z-10"
+              title="Close strategy panel"
+            >
+              <X className="w-4 h-4 text-violet-400 group-hover:text-red-400" />
+            </button>
           )}
-        </button>
+        </div>
 
         {/* Content */}
         {!isCollapsed && (
