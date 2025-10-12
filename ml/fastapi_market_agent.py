@@ -3,7 +3,7 @@ FastAPI Market Analysis Agent
 Dynamic API for social media campaign planning with real-time research
 
 Install dependencies:
-pip install fastapi uvicorn openai exa-py agno firecrawl python-dotenv pydantic
+pip install fastapi uvicorn openai exa-py agno firecrawl python-dotenv pydantic groq python-multipart
 """
 
 from datetime import datetime, timedelta
@@ -15,9 +15,14 @@ import json
 import re
 import time
 import hashlib
+import csv
+import smtplib
+import io
 from contextlib import asynccontextmanager
+from email.mime.text import MIMEText
+from groq import Groq
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from agno.agent import Agent
