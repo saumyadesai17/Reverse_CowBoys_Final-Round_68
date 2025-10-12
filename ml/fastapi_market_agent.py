@@ -42,6 +42,11 @@ from content_distribution_scheduler import (
     ContentDistributionResponse,
     schedule_content_distribution
 )
+from outreach_call_scheduler import (
+    OutreachCallRequest,
+    OutreachCallResponse,
+    schedule_outreach_calls
+)
 
 # Load environment variables
 load_dotenv()
@@ -1641,6 +1646,40 @@ async def schedule_content_distribution_endpoint(request: ContentDistributionReq
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error scheduling content distribution: {str(e)}")
+
+@app.post("/outreach_call_scheduler", response_model=OutreachCallResponse)
+async def schedule_outreach_calls_endpoint(request: OutreachCallRequest):
+    """
+    Schedule outreach calls with detailed call plans
+    
+    This endpoint creates detailed call schedules including:
+    - Lead prioritization based on qualification scores and segments
+    - Timezone-aware scheduling with optimal calling times
+    - Specific call objectives tailored to each lead
+    - Expected call durations and priority levels
+    - Call preparation notes and talking points
+    - Follow-up plans and success metrics
+    - Comprehensive schedule summaries
+    
+    Takes discovered leads and creates actionable call schedules
+    for sales and outreach campaigns.
+    """
+    try:
+        print(f"📞 Scheduling outreach calls for {len(request.discovered_leads)} leads")
+        print(f"📅 Campaign duration: {request.campaign_duration.start_date} to {request.campaign_duration.end_date}")
+        print(f"📊 Calls per day: {request.calls_per_day}")
+        print(f"🌍 Timezone: {request.call_window_preferences.timezone}")
+        
+        # Call the outreach call scheduler
+        result = schedule_outreach_calls(request)
+        
+        print(f"✅ Outreach call scheduling completed with status: {result.execution_status}")
+        print(f"📞 Generated {len(result.outputs.get('call_schedule', []))} call schedule items")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error scheduling outreach calls: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

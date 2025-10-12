@@ -16,7 +16,9 @@ import {
   Image as ImageIcon,
   Calendar,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  History,
+  Eye
 } from "lucide-react";
 import Link from "next/link";
 import { gsap } from "gsap";
@@ -94,28 +96,20 @@ export default function BriefPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+    canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    const nodes: Array<{ 
-      x: number; 
-      y: number; 
-      vx: number; 
-      vy: number; 
-      radius: number;
-      color: string;
-    }> = [];
+    const nodes: Array<{ x: number; y: number; vx: number; vy: number; radius: number }> = [];
     const connections: Array<{ from: number; to: number }> = [];
-    const colors = ["#8B5CF6", "#06B6D4", "#10B981"];
 
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 30; i++) {
       nodes.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
+        x: Math.random() * canvas.offsetWidth,
+        y: Math.random() * canvas.offsetHeight,
         vx: (Math.random() - 0.5) * 0.5,
         vy: (Math.random() - 0.5) * 0.5,
         radius: Math.random() * 3 + 2,
-        color: colors[Math.floor(Math.random() * colors.length)],
       });
     }
 
@@ -128,18 +122,17 @@ export default function BriefPage() {
     }
 
     let animationFrameId: number;
-
+    
     function animate() {
       if (!ctx || !canvas) return;
-      ctx.fillStyle = "rgba(2, 6, 23, 0.1)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
 
       nodes.forEach((node) => {
         node.x += node.vx;
         node.y += node.vy;
 
-        if (node.x < 0 || node.x > canvas.width) node.vx *= -1;
-        if (node.y < 0 || node.y > canvas.height) node.vy *= -1;
+        if (node.x < 0 || node.x > canvas.offsetWidth) node.vx *= -1;
+        if (node.y < 0 || node.y > canvas.offsetHeight) node.vy *= -1;
       });
 
       connections.forEach(({ from, to }) => {
@@ -147,11 +140,11 @@ export default function BriefPage() {
         const nodeTo = nodes[to];
         const distance = Math.hypot(nodeTo.x - nodeFrom.x, nodeTo.y - nodeFrom.y);
 
-        if (distance < 200) {
+        if (distance < 150) {
           ctx.beginPath();
           ctx.moveTo(nodeFrom.x, nodeFrom.y);
           ctx.lineTo(nodeTo.x, nodeTo.y);
-          ctx.strokeStyle = `rgba(139, 92, 246, ${0.3 * (1 - distance / 200)})`;
+          ctx.strokeStyle = `rgba(139, 92, 246, ${1 - distance / 150})`;
           ctx.lineWidth = 1;
           ctx.stroke();
         }
@@ -160,18 +153,15 @@ export default function BriefPage() {
       nodes.forEach((node) => {
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-        ctx.fillStyle = node.color;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = node.color;
+        ctx.fillStyle = "#8B5CF6";
         ctx.fill();
-        ctx.shadowBlur = 0;
       });
 
       animationFrameId = requestAnimationFrame(animate);
     }
 
     animate();
-
+    
     return () => {
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -265,7 +255,7 @@ export default function BriefPage() {
   return (
     <div
       ref={containerRef}
-      className="h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden flex flex-col"
+      className="h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden flex flex-col"
     >
       {/* Animated Canvas Background */}
       <canvas
@@ -289,6 +279,9 @@ export default function BriefPage() {
           <div className="flex items-center space-x-6 text-sm">
             <Link href="/landing" className="text-slate-300 hover:text-white transition-colors">
               Home
+            </Link>
+            <Link href="/campaigns" className="text-slate-300 hover:text-white transition-colors">
+              Campaigns
             </Link>
             <Link href="/canvas" className="text-slate-300 hover:text-white transition-colors">
               Canvas
@@ -351,15 +344,36 @@ export default function BriefPage() {
                   </div>
                 </Card>
               )}
+
+              {/* View Previous Campaigns */}
+              <Link href="/campaigns">
+                <Card className="bg-gradient-to-br from-violet-500/10 to-blue-500/10 border-violet-500/30 hover:border-violet-500/60 p-4 mb-4 cursor-pointer group transition-all duration-300 hover:scale-[1.02]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-violet-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <History className="w-5 h-5 text-violet-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold text-sm mb-0.5">View Previous Campaigns</h3>
+                        <p className="text-slate-400 text-xs">Browse your campaign history and insights</p>
+                      </div>
+                    </div>
+                    <Eye className="w-5 h-5 text-violet-400 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </Card>
+              </Link>
             </div>
 
             {/* Right Column - Example Briefs or Thinking Process */}
             <div className="hidden lg:block max-h-[calc(100vh-200px)] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
               {!isGenerating ? (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-slate-300 font-medium">Quick Examples</p>
-                    <span className="text-xs text-slate-500">Click to use</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <Sparkles className="w-4 h-4 text-violet-400" />
+                      <p className="text-sm text-white font-semibold">Quick Examples</p>
+                    </div>
+                    <span className="text-xs text-violet-400 font-medium">Click to use</span>
                   </div>
                   {exampleBriefs.map((example, idx) => {
                     const IconComponent = example.icon;
@@ -372,16 +386,16 @@ export default function BriefPage() {
                     return (
                       <Card
                         key={idx}
-                        className="example-card bg-slate-800/30 border-slate-700 p-4 hover:border-violet-500 hover:bg-slate-800/50 transition-all duration-300 cursor-pointer group"
+                        className="example-card bg-gradient-to-br from-slate-800/50 to-slate-800/30 border-violet-500/40 p-4 hover:border-violet-500 hover:from-slate-800/70 hover:to-slate-800/50 hover:shadow-lg hover:shadow-violet-500/20 transition-all duration-300 cursor-pointer group"
                         onClick={() => fillExample(example.brief)}
                       >
                         <div className="flex items-start space-x-3">
-                          <div className={`w-10 h-10 rounded-xl ${colorClasses} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                          <div className={`w-10 h-10 rounded-xl ${colorClasses} border flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
                             <IconComponent className="w-5 h-5" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-white text-sm mb-2">{example.title}</h3>
-                            <p className="text-xs text-slate-400 line-clamp-3">{example.brief}</p>
+                            <h3 className="font-semibold text-white text-sm mb-2 group-hover:text-violet-300 transition-colors">{example.title}</h3>
+                            <p className="text-xs text-slate-400 line-clamp-3 group-hover:text-slate-300 transition-colors">{example.brief}</p>
                           </div>
                         </div>
                       </Card>
@@ -450,7 +464,7 @@ export default function BriefPage() {
         {/* Bottom - Features Horizontal */}
         <div className="relative z-10 pb-4 pt-2 flex-shrink-0">
           <div className="max-w-7xl mx-auto">
-            <div className="bg-slate-900/30 backdrop-blur-sm border border-slate-800 rounded-xl p-4">
+            <div className="bg-slate-900/20 backdrop-blur-sm border border-slate-800/50 rounded-xl p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {features.map((feature, idx) => {
                   const IconComponent = feature.icon;
@@ -460,45 +474,33 @@ export default function BriefPage() {
                       key={idx}
                       className={`feature-item group relative overflow-hidden rounded-lg transition-all duration-500 ${
                         isActive 
-                          ? 'bg-gradient-to-br from-violet-500/20 to-blue-500/20 border-violet-500/40' 
-                          : 'bg-slate-800/30 border-slate-700/50 hover:border-slate-600'
+                          ? 'bg-slate-800/40 border-slate-700' 
+                          : 'bg-slate-800/20 border-slate-700/30 hover:border-slate-600/50'
                       } border p-4`}
                     >
-                      {/* Glow effect for active card */}
-                      {isActive && (
-                        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-blue-500/10 animate-pulse" />
-                      )}
-                      
                       <div className="relative flex items-start space-x-3">
                         <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
                           isActive 
-                            ? 'bg-violet-500/30 shadow-lg shadow-violet-500/20 scale-110' 
-                            : 'bg-violet-500/20 group-hover:scale-105'
+                            ? 'bg-violet-500/20 scale-105' 
+                            : 'bg-violet-500/10 group-hover:scale-105'
                         }`}>
                           <IconComponent className={`w-6 h-6 transition-colors duration-500 ${
-                            isActive ? 'text-violet-300' : 'text-violet-400'
+                            isActive ? 'text-violet-400' : 'text-violet-400/70'
                           }`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className={`text-sm font-bold mb-1 transition-colors duration-500 ${
-                            isActive ? 'text-white' : 'text-slate-200'
+                            isActive ? 'text-slate-200' : 'text-slate-300'
                           }`}>
                             {feature.title}
                           </h3>
                           <p className={`text-xs leading-relaxed transition-colors duration-500 ${
-                            isActive ? 'text-slate-300' : 'text-slate-400'
+                            isActive ? 'text-slate-400' : 'text-slate-500'
                           }`}>
                             {feature.description}
                           </p>
                         </div>
                       </div>
-
-                      {/* Active indicator dot */}
-                      {isActive && (
-                        <div className="absolute top-2 right-2">
-                          <div className="w-2 h-2 bg-violet-400 rounded-full animate-pulse" />
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -512,8 +514,8 @@ export default function BriefPage() {
                     onClick={() => setActiveFeature(idx)}
                     className={`transition-all duration-300 rounded-full ${
                       activeFeature === idx 
-                        ? 'w-6 h-2 bg-violet-500' 
-                        : 'w-2 h-2 bg-slate-600 hover:bg-slate-500'
+                        ? 'w-6 h-2 bg-violet-500/60' 
+                        : 'w-2 h-2 bg-slate-700 hover:bg-slate-600'
                     }`}
                     aria-label={`View feature ${idx + 1}`}
                   />

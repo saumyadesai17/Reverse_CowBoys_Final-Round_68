@@ -9,7 +9,7 @@ import {
   clearStoredCampaignResponse 
 } from "@/lib/backendWorkflowGenerator";
 import { generateWorkflowFromBrief } from "@/lib/workflowGenerator";
-import { Network, Sparkles, Home, ArrowLeft } from "lucide-react";
+import { Network, Sparkles, Home, ArrowLeft, History } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -162,6 +162,12 @@ export default function CanvasPage() {
           </div>
           
           <div className="flex items-center space-x-4">
+            <Link href="/campaigns">
+              <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800">
+                <History className="w-4 h-4 mr-2" />
+                Campaigns
+              </Button>
+            </Link>
             <Link href="/brief">
               <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800">
                 <ArrowLeft className="w-4 h-4 mr-2" />
