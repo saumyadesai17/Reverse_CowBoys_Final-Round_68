@@ -42,11 +42,6 @@ from content_distribution_scheduler import (
     ContentDistributionResponse,
     schedule_content_distribution
 )
-from outreach_call_scheduler import (
-    OutreachCallRequest,
-    OutreachCallResponse,
-    schedule_outreach_calls
-)
 
 # Load environment variables
 load_dotenv()
@@ -403,17 +398,10 @@ class ExternalApiOrchestrator(BaseModel):
 
 class ModuleConfigurations(BaseModel):
     visual_asset_generator: Optional[VisualAssetGenerator] = Field(None, description="Visual asset generator configuration")
-    video_content_generator: Optional[VideoContentGenerator] = Field(None, description="Video content generator configuration")
     copy_content_generator: Optional[CopyContentGenerator] = Field(None, description="Copy content generator configuration")
     audience_intelligence_analyzer: Optional[AudienceIntelligenceAnalyzer] = Field(None, description="Audience intelligence analyzer configuration")
     campaign_timeline_optimizer: Optional[CampaignTimelineOptimizer] = Field(None, description="Campaign timeline optimizer configuration")
     content_distribution_scheduler: Optional[ContentDistributionScheduler] = Field(None, description="Content distribution scheduler configuration")
-    content_distribution_executor: Optional[ContentDistributionExecutor] = Field(None, description="Content distribution executor configuration")
-    outreach_call_scheduler: Optional[OutreachCallScheduler] = Field(None, description="Outreach call scheduler configuration")
-    voice_interaction_agent: Optional[VoiceInteractionAgent] = Field(None, description="Voice interaction agent configuration")
-    lead_discovery_engine: Optional[LeadDiscoveryEngine] = Field(None, description="Lead discovery engine configuration")
-    collaboration_outreach_composer: Optional[CollaborationOutreachComposer] = Field(None, description="Collaboration outreach composer configuration")
-    external_api_orchestrator: Optional[ExternalApiOrchestrator] = Field(None, description="External API orchestrator configuration")
 
 # Request/Response Models
 class QuickCampaignRequest(BaseModel):
@@ -625,21 +613,6 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
         negative_prompts=["blurry", "low quality", "unprofessional"]
     )
     
-    video_content_generator = VideoContentGenerator(
-        content_type=["text_to_video", "image_sequence", "template_based"],
-        script=f"Engaging video script for {campaign_brief}",
-        image_inputs=[],
-        duration=30,
-        aspect_ratio=["16:9", "9:16", "1:1"],
-        background_music=BackgroundMusic(
-            music_style="upbeat",
-            volume=0.7
-        ),
-        voiceover=Voiceover(
-            voice_type="professional",
-            language="English"
-        )
-    )
     
     copy_content_generator = CopyContentGenerator(
         content_purpose=["social_caption", "ad_copy", "blog_post"],
@@ -696,116 +669,13 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
         )
     )
     
-    content_distribution_executor = ContentDistributionExecutor(
-        distribution_schedule=[],
-        platform_credentials=PlatformCredentials(
-            platform_name="Instagram",
-            auth_token=None,
-            account_id=None
-        ),
-        execution_mode=["immediate"],
-        monitoring_enabled=True,
-        rollback_on_failure=True
-    )
-    
-    outreach_call_scheduler = OutreachCallScheduler(
-        discovered_leads=[],
-        call_window_preferences=CallWindowPreferences(
-            timezone="Asia/Kolkata",
-            preferred_hours=["10:00", "14:00", "16:00"],
-            avoid_dates=[]
-        ),
-        campaign_duration=CampaignDuration(
-            start_date="2024-01-01",
-            end_date="2024-01-31"
-        ),
-        calls_per_day=5,
-        prioritization_criteria=PrioritizationCriteria(
-            qualification_score_threshold=0.7,
-            priority_segments=["high-value", "engaged"]
-        )
-    )
-    
-    voice_interaction_agent = VoiceInteractionAgent(
-        call_schedule=[],
-        conversation_objective=["qualification", "demo_booking"],
-        call_script=CallScript(
-            opening="Hello, I'm calling about our new product launch",
-            talking_points=["product benefits", "special offers", "next steps"],
-            objection_handling={},
-            closing="Thank you for your time",
-            follow_up=["email follow-up", "demo scheduling"]
-        ),
-        voice_settings=VoiceSettings(
-            voice_type="professional",
-            speech_rate=1.0,
-            language="English"
-        ),
-        max_call_duration=300,
-        auto_dial=False
-    )
-    
-    lead_discovery_engine = LeadDiscoveryEngine(
-        search_criteria=SearchCriteria(
-            industry=["technology", "food & beverage"],
-            company_size="medium",
-            job_titles=["marketing manager", "brand manager"],
-            location="Mumbai"
-        ),
-        audience_segments=["primary", "secondary"],
-        data_sources=["linkedin", "company_databases"],
-        qualification_criteria=QualificationCriteria(
-            budget_range="medium",
-            decision_making_authority=True,
-            timeline="Q1 2024"
-        ),
-        max_leads=100,
-        enrichment_required=True
-    )
-    
-    collaboration_outreach_composer = CollaborationOutreachComposer(
-        target_profiles=[],
-        discovered_leads=[],
-        campaign_brief=campaign_brief,
-        generated_copies=[],
-        outreach_type=["collaboration", "sponsorship"],
-        personalization_level=["medium", "high"],
-        template_guidelines=TemplateGuidelines(
-            max_length=200,
-            tone="professional",
-            include_offer=True
-        )
-    )
-    
-    external_api_orchestrator = ExternalApiOrchestrator(
-        api_endpoint="https://api.example.com",
-        http_method=["GET", "POST"],
-        request_headers={},
-        request_body={},
-        authentication=Authentication(
-            auth_type=["bearer", "api_key"],
-            credentials={}
-        ),
-        retry_policy=RetryPolicy(
-            max_retries=3,
-            backoff_strategy=["exponential"]
-        ),
-        response_mapping={}
-    )
     
     return ModuleConfigurations(
         visual_asset_generator=visual_asset_generator,
-        video_content_generator=video_content_generator,
         copy_content_generator=copy_content_generator,
         audience_intelligence_analyzer=audience_intelligence_analyzer,
         campaign_timeline_optimizer=campaign_timeline_optimizer,
-        content_distribution_scheduler=content_distribution_scheduler,
-        content_distribution_executor=content_distribution_executor,
-        outreach_call_scheduler=outreach_call_scheduler,
-        voice_interaction_agent=voice_interaction_agent,
-        lead_discovery_engine=lead_discovery_engine,
-        collaboration_outreach_composer=collaboration_outreach_composer,
-        external_api_orchestrator=external_api_orchestrator
+        content_distribution_scheduler=content_distribution_scheduler
     )
 
 def get_module_connections() -> List[ModuleConnections]:
@@ -828,11 +698,6 @@ def get_module_connections() -> List[ModuleConnections]:
                     target_module="campaign_timeline_optimizer",
                     source_output="optimal_posting_times",
                     target_input="optimal_posting_times"
-                ),
-                ModuleConnection(
-                    target_module="lead_discovery_engine",
-                    source_output="audience_segments",
-                    target_input="audience_segments"
                 )
             ]
         ),
@@ -848,11 +713,6 @@ def get_module_connections() -> List[ModuleConnections]:
                     target_module="content_distribution_scheduler",
                     source_output="generated_copies",
                     target_input="generated_copies"
-                ),
-                ModuleConnection(
-                    target_module="collaboration_outreach_composer",
-                    source_output="generated_copies",
-                    target_input="generated_copies"
                 )
             ]
         ),
@@ -860,24 +720,9 @@ def get_module_connections() -> List[ModuleConnections]:
             module_name="visual_asset_generator",
             connections=[
                 ModuleConnection(
-                    target_module="video_content_generator",
-                    source_output="generated_images",
-                    target_input="image_inputs"
-                ),
-                ModuleConnection(
                     target_module="content_distribution_scheduler",
                     source_output="generated_images",
                     target_input="generated_images"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="video_content_generator",
-            connections=[
-                ModuleConnection(
-                    target_module="content_distribution_scheduler",
-                    source_output="video_url",
-                    target_input="video_url"
                 )
             ]
         ),
@@ -888,86 +733,6 @@ def get_module_connections() -> List[ModuleConnections]:
                     target_module="content_distribution_scheduler",
                     source_output="optimized_timeline",
                     target_input="optimized_timeline"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="content_distribution_scheduler",
-            connections=[
-                ModuleConnection(
-                    target_module="content_distribution_executor",
-                    source_output="distribution_schedule",
-                    target_input="distribution_schedule"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="lead_discovery_engine",
-            connections=[
-                ModuleConnection(
-                    target_module="outreach_call_scheduler",
-                    source_output="discovered_leads",
-                    target_input="discovered_leads"
-                ),
-                ModuleConnection(
-                    target_module="collaboration_outreach_composer",
-                    source_output="discovered_leads",
-                    target_input="discovered_leads"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="outreach_call_scheduler",
-            connections=[
-                ModuleConnection(
-                    target_module="voice_interaction_agent",
-                    source_output="call_schedule",
-                    target_input="call_schedule"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="voice_interaction_agent",
-            connections=[
-                ModuleConnection(
-                    target_module="external_api_orchestrator",
-                    source_output="call_results",
-                    target_input="request_body"
-                ),
-                ModuleConnection(
-                    target_module="external_api_orchestrator",
-                    source_output="extracted_intelligence",
-                    target_input="request_body"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="collaboration_outreach_composer",
-            connections=[
-                ModuleConnection(
-                    target_module="content_distribution_executor",
-                    source_output="outreach_messages",
-                    target_input="distribution_schedule"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="content_distribution_executor",
-            connections=[
-                ModuleConnection(
-                    target_module="external_api_orchestrator",
-                    source_output="executed_posts",
-                    target_input="request_body"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="external_api_orchestrator",
-            connections=[
-                ModuleConnection(
-                    target_module="any_module",
-                    source_output="parsed_data",
-                    target_input="[compatible_field]"
                 )
             ]
         )
@@ -1646,40 +1411,6 @@ async def schedule_content_distribution_endpoint(request: ContentDistributionReq
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error scheduling content distribution: {str(e)}")
-
-@app.post("/outreach_call_scheduler", response_model=OutreachCallResponse)
-async def schedule_outreach_calls_endpoint(request: OutreachCallRequest):
-    """
-    Schedule outreach calls with detailed call plans
-    
-    This endpoint creates detailed call schedules including:
-    - Lead prioritization based on qualification scores and segments
-    - Timezone-aware scheduling with optimal calling times
-    - Specific call objectives tailored to each lead
-    - Expected call durations and priority levels
-    - Call preparation notes and talking points
-    - Follow-up plans and success metrics
-    - Comprehensive schedule summaries
-    
-    Takes discovered leads and creates actionable call schedules
-    for sales and outreach campaigns.
-    """
-    try:
-        print(f"📞 Scheduling outreach calls for {len(request.discovered_leads)} leads")
-        print(f"📅 Campaign duration: {request.campaign_duration.start_date} to {request.campaign_duration.end_date}")
-        print(f"📊 Calls per day: {request.calls_per_day}")
-        print(f"🌍 Timezone: {request.call_window_preferences.timezone}")
-        
-        # Call the outreach call scheduler
-        result = schedule_outreach_calls(request)
-        
-        print(f"✅ Outreach call scheduling completed with status: {result.execution_status}")
-        print(f"📞 Generated {len(result.outputs.get('call_schedule', []))} call schedule items")
-        
-        return result
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error scheduling outreach calls: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
