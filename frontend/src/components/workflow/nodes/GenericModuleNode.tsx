@@ -265,10 +265,20 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                       />
                     ) : propType === "enum" ? (
                       <Select 
-                        value={String(item?.[propKey] || "")} 
+                        value={
+                          // Handle both string and array values for priority field
+                          propKey === "priority" && Array.isArray(item?.[propKey]) 
+                            ? String(item[propKey][0] || "") 
+                            : String(item?.[propKey] || "")
+                        } 
                         onValueChange={(newValue) => {
                           const newArray = [...value];
-                          newArray[index] = { ...newArray[index], [propKey]: newValue };
+                          // Special handling for priority field - save as array for backend compatibility
+                          if (propKey === "priority") {
+                            newArray[index] = { ...newArray[index], [propKey]: [newValue] };
+                          } else {
+                            newArray[index] = { ...newArray[index], [propKey]: newValue };
+                          }
                           updateInput(inputKey, newArray);
                         }}
                       >
@@ -325,8 +335,20 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             if (typeof itemsSchema === 'object' && itemsSchema !== null) {
               // Create object with empty properties
               newItem = {};
-              Object.keys(itemsSchema).forEach(key => {
-                newItem[key] = "";
+              Object.entries(itemsSchema).forEach(([key, propType]) => {
+                // Initialize with appropriate default values based on type
+                if (propType === "enum") {
+                  // Special case: priority field needs to be initialized as array for backend compatibility
+                  if (key === "priority") {
+                    newItem[key] = [];
+                  } else {
+                    newItem[key] = ""; // Keep as empty string for regular enums
+                  }
+                } else if (propType === "date") {
+                  newItem[key] = "";
+                } else {
+                  newItem[key] = "";
+                }
               });
             } else {
               newItem = "";

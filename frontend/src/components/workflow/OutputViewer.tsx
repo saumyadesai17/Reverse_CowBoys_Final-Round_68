@@ -14,6 +14,7 @@ import {
   Eye
 } from "lucide-react";
 import { ExecutionResult } from "@/lib/workflowExecution";
+import { CampaignCalendarWithTimeline } from "./CampaignCalendar";
 
 interface OutputViewerProps {
   moduleName: string;
@@ -237,6 +238,55 @@ export function OutputViewer({ moduleName, result, onClose }: OutputViewerProps)
     );
   };
 
+  const renderContentDistributionSchedulerOutput = (outputs: any) => {
+    if (outputs.distribution_schedule && Array.isArray(outputs.distribution_schedule)) {
+      return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-white">Campaign Schedule Calendar</h3>
+          <div className="h-[600px] w-full">
+            <CampaignCalendarWithTimeline timelineData={outputs.distribution_schedule} />
+          </div>
+          
+          {/* Schedule Summary */}
+          {outputs.schedule_summary && (
+            <Card className="bg-slate-800 border-slate-700 p-4">
+              <h4 className="font-medium text-white mb-3">Schedule Summary</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div className="space-y-1">
+                  <p className="text-slate-400">Total Posts</p>
+                  <p className="text-white font-medium">{outputs.schedule_summary.total_posts}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-slate-400">Timeline Coverage</p>
+                  <p className="text-white font-medium">{outputs.schedule_summary.campaign_coverage?.timeline_coverage || 'N/A'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-slate-400">Platform Distribution</p>
+                  <p className="text-white font-medium">{outputs.schedule_summary.campaign_coverage?.platform_distribution || 'N/A'}</p>
+                </div>
+              </div>
+              
+              {outputs.schedule_summary.posts_by_platform && (
+                <div className="mt-4">
+                  <p className="text-slate-400 mb-2">Posts by Platform</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(outputs.schedule_summary.posts_by_platform).map(([platform, count]) => (
+                      <div key={platform} className="bg-slate-700 px-3 py-1 rounded-full text-xs">
+                        <span className="text-slate-300">{platform}:</span>
+                        <span className="text-white ml-1">{String(count)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
+      );
+    }
+    return renderGenericOutput(outputs);
+  };
+
   const renderGenericOutput = (outputs: any) => {
     return (
       <div className="space-y-4">
@@ -258,6 +308,8 @@ export function OutputViewer({ moduleName, result, onClose }: OutputViewerProps)
         return renderCopyContentOutput(result.outputs) || renderGenericOutput(result.outputs);
       case 'audience_intelligence_analyzer':
         return renderAudienceAnalysisOutput(result.outputs) || renderGenericOutput(result.outputs);
+      case 'content_distribution_scheduler':
+        return renderContentDistributionSchedulerOutput(result.outputs) || renderGenericOutput(result.outputs);
       default:
         return renderGenericOutput(result.outputs);
     }

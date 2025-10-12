@@ -42,6 +42,10 @@ interface CampaignState {
   executionResults: Record<string, any>;
   setExecutionResult: (nodeId: string, result: any) => void;
   
+  // Strategy Plan from AI Agent
+  strategyPlan: string | null;
+  setStrategyPlan: (plan: string | null) => void;
+  
   // Campaign History
   campaignHistory: CampaignHistory[];
   addCampaign: (campaign: CampaignHistory) => void;
@@ -70,6 +74,10 @@ export const useCampaignStore = create<CampaignState>()(
         set((state) => ({
           executionResults: { ...state.executionResults, [nodeId]: result }
         })),
+      
+      // Strategy Plan
+      strategyPlan: null,
+      setStrategyPlan: (plan) => set({ strategyPlan: plan }),
       
       // Campaign History
       campaignHistory: [],

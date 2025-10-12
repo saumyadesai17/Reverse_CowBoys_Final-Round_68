@@ -43,6 +43,14 @@ function processConfigForFrontend(config: any, moduleName: string): Record<strin
   
   const processed: Record<string, any> = {};
   
+  // HARDCODE OVERRIDE: Force campaign_duration to 2025 October-December for all modules
+  if (config.campaign_duration) {
+    config.campaign_duration = {
+      start_date: "2025-10-01",
+      end_date: "2025-12-31"
+    };
+  }
+  
   // First, process all existing config values
   for (const [key, value] of Object.entries(config)) {
     const inputDef = moduleDefinition?.inputs?.[key] as any; // Type assertion for dynamic access
@@ -255,7 +263,15 @@ function createEdgesFromConnections(connections: ModuleConnection[]): Edge[] {
 export function generateWorkflowFromCampaignResponse(
   campaignResponse: CampaignResponse
 ): WorkflowGenerationResult {
-  const { module_configurations, module_connections } = campaignResponse;
+  const { module_configurations, module_connections, strategy_plan } = campaignResponse;
+  
+  // Store strategy plan in store for display
+  if (strategy_plan) {
+    // Import store dynamically to avoid circular dependencies
+    import('@/stores/campaignStore').then(({ useCampaignStore }) => {
+      useCampaignStore.getState().setStrategyPlan(strategy_plan);
+    });
+  }
   
   // Create nodes from module configurations
   const moduleNames = Object.keys(module_configurations);

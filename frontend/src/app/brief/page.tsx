@@ -347,7 +347,7 @@ export default function BriefPage() {
 
               {/* View Previous Campaigns */}
               <Link href="/campaigns">
-                <Card className="bg-gradient-to-br from-violet-500/10 to-blue-500/10 border-violet-500/30 hover:border-violet-500/60 p-4 mb-4 cursor-pointer group transition-all duration-300 hover:scale-[1.02]">
+                <Card className="bg-gradient-to-br from-violet-500/10 to-blue-500/10 border-violet-500/30 hover:border-violet-500/60 p-4 mb-4 cursor-pointer group transition-all duration-300">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-violet-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
