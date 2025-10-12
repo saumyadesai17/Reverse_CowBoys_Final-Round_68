@@ -9,6 +9,7 @@ import {
   clearStoredCampaignResponse 
 } from "@/lib/backendWorkflowGenerator";
 import { generateWorkflowFromBrief } from "@/lib/workflowGenerator";
+import { useCampaignStore } from "@/stores/campaignStore";
 import { Network, Sparkles, Home, ArrowLeft, History } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ export default function CanvasPage() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { setStrategyPlan } = useCampaignStore();
 
   useEffect(() => {
     // Animated background
@@ -103,6 +105,9 @@ export default function CanvasPage() {
   }, []);
 
   useEffect(() => {
+    // Clear any previous strategy plan when component mounts
+    setStrategyPlan(null);
+    
     // Try to get campaign response from backend generator first
     const campaignResponse = getStoredCampaignResponse();
     
@@ -136,7 +141,7 @@ export default function CanvasPage() {
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [setStrategyPlan]);
 
   return (
     <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative">

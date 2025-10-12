@@ -22,6 +22,7 @@ import { InputNode } from "./nodes/InputNode";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { Sidebar } from "./Sidebar";
 import { CampaignCalendar } from "./CampaignCalendar";
+import { StrategyPanel } from "./StrategyPanel";
 import { MODULE_DEFINITIONS, CONNECTION_MATRIX } from "@/lib/moduleDefinitions";
 import { Eye, EyeOff, Play, Square } from "lucide-react";
 import { WorkflowExecutionService } from "@/lib/workflowExecution";
@@ -104,7 +105,7 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
   const [showCalendar, setShowCalendar] = React.useState(false);
   const [isExecutingWorkflow, setIsExecutingWorkflow] = React.useState(false);
   const [executionProgress, setExecutionProgress] = React.useState<{completed: number, total: number}>({completed: 0, total: 0});
-  const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview, setExecutionResult } = useCampaignStore();
+  const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview, setExecutionResult, strategyPlan } = useCampaignStore();
 
   // Update nodes and edges when props change
   useEffect(() => {
@@ -411,6 +412,9 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
     <>
       <div className="h-full w-full flex overflow-hidden">
         <div className="flex-1 relative h-full">
+          {/* Strategy Panel - AI Agent's Thought Process */}
+          {strategyPlan && <StrategyPanel strategyPlan={strategyPlan} />}
+          
           <ReactFlow
             nodes={nodes}
             edges={edges}

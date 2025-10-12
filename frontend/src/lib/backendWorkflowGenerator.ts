@@ -255,7 +255,15 @@ function createEdgesFromConnections(connections: ModuleConnection[]): Edge[] {
 export function generateWorkflowFromCampaignResponse(
   campaignResponse: CampaignResponse
 ): WorkflowGenerationResult {
-  const { module_configurations, module_connections } = campaignResponse;
+  const { module_configurations, module_connections, strategy_plan } = campaignResponse;
+  
+  // Store strategy plan in store for display
+  if (strategy_plan) {
+    // Import store dynamically to avoid circular dependencies
+    import('@/stores/campaignStore').then(({ useCampaignStore }) => {
+      useCampaignStore.getState().setStrategyPlan(strategy_plan);
+    });
+  }
   
   // Create nodes from module configurations
   const moduleNames = Object.keys(module_configurations);
