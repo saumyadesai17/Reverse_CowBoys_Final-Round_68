@@ -222,7 +222,26 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
       
       if (moduleDefinition) {
         Object.entries(moduleDefinition.inputs).forEach(([key, inputDef]: [string, any]) => {
-          initialInputs[key] = inputDef.default || (inputDef.type === 'integer' ? 0 : inputDef.type === 'boolean' ? false : '');
+          if (inputDef.type === 'array') {
+            initialInputs[key] = [];
+          } else if (inputDef.type === 'object') {
+            // Initialize object with proper structure based on properties definition
+            const objectValue: Record<string, any> = {};
+            if (inputDef.properties) {
+              Object.entries(inputDef.properties).forEach(([propKey, propType]) => {
+                if (Array.isArray(propType)) {
+                  objectValue[propKey] = [];
+                } else if (propType === 'object') {
+                  objectValue[propKey] = {};
+                } else {
+                  objectValue[propKey] = "";
+                }
+              });
+            }
+            initialInputs[key] = objectValue;
+          } else {
+            initialInputs[key] = inputDef.default || (inputDef.type === 'integer' ? 0 : inputDef.type === 'boolean' ? false : '');
+          }
         });
       }
 
@@ -305,7 +324,26 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
     
     if (moduleDefinition) {
       Object.entries(moduleDefinition.inputs).forEach(([key, inputDef]: [string, any]) => {
-        initialInputs[key] = inputDef.default || (inputDef.type === 'integer' ? 0 : inputDef.type === 'boolean' ? false : '');
+        if (inputDef.type === 'array') {
+          initialInputs[key] = [];
+        } else if (inputDef.type === 'object') {
+          // Initialize object with proper structure based on properties definition
+          const objectValue: Record<string, any> = {};
+          if (inputDef.properties) {
+            Object.entries(inputDef.properties).forEach(([propKey, propType]) => {
+              if (Array.isArray(propType)) {
+                objectValue[propKey] = [];
+              } else if (propType === 'object') {
+                objectValue[propKey] = {};
+              } else {
+                objectValue[propKey] = "";
+              }
+            });
+          }
+          initialInputs[key] = objectValue;
+        } else {
+          initialInputs[key] = inputDef.default || (inputDef.type === 'integer' ? 0 : inputDef.type === 'boolean' ? false : '');
+        }
       });
     }
 
