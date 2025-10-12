@@ -19,8 +19,8 @@ function createNodeFromModuleConfig(
     ? calculateSmartNodePosition(moduleName, moduleNames, connections)
     : calculateNodePosition(moduleNames.indexOf(moduleName), moduleNames.length);
   
-  // Convert array values to single values for enum fields
-  const processedInputs = processConfigForFrontend(config || {});
+  // Process config while preserving data types and structure
+  const processedInputs = processConfigForFrontend(config || {}, moduleName);
   
   return {
     id: `${moduleName}-0`,
@@ -35,26 +35,108 @@ function createNodeFromModuleConfig(
   };
 }
 
-// Process backend config to make it compatible with frontend components
-function processConfigForFrontend(config: any): Record<string, any> {
+// Process backend config to preserve the original data structure
+function processConfigForFrontend(config: any, moduleName: string): Record<string, any> {
+  // Import module definitions to understand expected input types
+  const { MODULE_DEFINITIONS } = require('./moduleDefinitions');
+  const moduleDefinition = MODULE_DEFINITIONS[moduleName as keyof typeof MODULE_DEFINITIONS];
+  
   const processed: Record<string, any> = {};
   
+  // First, process all existing config values
   for (const [key, value] of Object.entries(config)) {
-    if (Array.isArray(value)) {
-      // For arrays, take the first value if it's a simple array of strings/numbers
-      // This handles cases like ["photorealistic", "illustration"] -> "photorealistic"
-      if (value.length > 0 && (typeof value[0] === 'string' || typeof value[0] === 'number')) {
-        processed[key] = value[0];
+    const inputDef = moduleDefinition?.inputs?.[key] as any; // Type assertion for dynamic access
+    
+    // If we have a definition for this input, ensure proper data type initialization
+    if (inputDef) {
+      if (inputDef.type === 'array') {
+        // Ensure array types are properly initialized
+        if (Array.isArray(value)) {
+          processed[key] = [...value]; // Create a copy
+        } else if (value !== null && value !== undefined) {
+          processed[key] = [value]; // Convert single value to array
+        } else {
+          processed[key] = [];
+        }
+      } else if (inputDef.type === 'object') {
+        // Ensure object types are properly initialized
+        if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+          const objectValue = { ...value } as Record<string, any>; // Create a copy with type assertion
+          
+          // Ensure array properties within objects are properly handled
+          if (inputDef.properties) {
+            for (const [propKey, propType] of Object.entries(inputDef.properties)) {
+              if (Array.isArray(propType) && objectValue[propKey] !== undefined) {
+                // This property should be an array
+                if (!Array.isArray(objectValue[propKey])) {
+                  // Convert to array if it's not already
+                  if (typeof objectValue[propKey] === 'string') {
+                    try {
+                      const parsed = JSON.parse(objectValue[propKey]);
+                      objectValue[propKey] = Array.isArray(parsed) ? parsed : [objectValue[propKey]];
+                    } catch {
+                      objectValue[propKey] = [objectValue[propKey]];
+                    }
+                  } else {
+                    objectValue[propKey] = objectValue[propKey] ? [objectValue[propKey]] : [];
+                  }
+                }
+              } else if (Array.isArray(propType) && objectValue[propKey] === undefined) {
+                // Initialize missing array properties
+                objectValue[propKey] = [];
+              }
+            }
+          }
+          
+          processed[key] = objectValue;
+        } else {
+          processed[key] = {};
+        }
       } else {
-        // Keep complex arrays as is
+        // Preserve the original value for primitive types
         processed[key] = value;
       }
-    } else if (value !== null && typeof value === 'object') {
-      // Recursively process nested objects
-      processed[key] = processConfigForFrontend(value);
     } else {
-      // Keep primitive values as is
-      processed[key] = value;
+      // For undefined inputs in schema, preserve as is
+      if (Array.isArray(value)) {
+        processed[key] = [...value];
+      } else if (value !== null && typeof value === 'object') {
+        processed[key] = { ...value };
+      } else {
+        processed[key] = value;
+      }
+    }
+  }
+  
+  // Then, ensure all schema-defined inputs are initialized
+  if (moduleDefinition?.inputs) {
+    for (const [key, inputDef] of Object.entries(moduleDefinition.inputs)) {
+      if (!(key in processed)) {
+        const def = inputDef as any; // Type assertion for dynamic module definitions
+        // Initialize missing inputs based on their type
+        if (def.type === 'array') {
+          processed[key] = [];
+        } else if (def.type === 'object') {
+          // Initialize object with proper structure based on properties definition
+          const objectValue: Record<string, any> = {};
+          if (def.properties) {
+            for (const [propKey, propType] of Object.entries(def.properties)) {
+              if (Array.isArray(propType)) {
+                // This property should be an array
+                objectValue[propKey] = [];
+              } else if (propType === 'object') {
+                objectValue[propKey] = {};
+              } else {
+                // Primitive type, leave empty for now
+                objectValue[propKey] = "";
+              }
+            }
+          }
+          processed[key] = objectValue;
+        } else if (def.default !== undefined) {
+          processed[key] = def.default;
+        }
+      }
     }
   }
   
