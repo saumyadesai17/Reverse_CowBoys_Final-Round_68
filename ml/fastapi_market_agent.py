@@ -30,6 +30,23 @@ from agno.models.google import Gemini
 from agno.tools.exa import ExaTools
 from agno.tools.firecrawl import FirecrawlTools
 from dotenv import load_dotenv
+from image import visual_asset_manager
+from audience_intelligence_analyzer import (
+    AudienceIntelligenceRequest, 
+    AudienceIntelligenceResponse,
+    analyze_audience_intelligence
+)
+from copy_content_generator import generate_social_content
+from campaign_timeline_optimizer import (
+    CampaignTimelineRequest,
+    CampaignTimelineResponse,
+    optimize_campaign_timeline
+)
+from content_distribution_scheduler import (
+    ContentDistributionRequest,
+    ContentDistributionResponse,
+    schedule_content_distribution
+)
 
 # Load environment variables
 load_dotenv()
@@ -386,17 +403,10 @@ class ExternalApiOrchestrator(BaseModel):
 
 class ModuleConfigurations(BaseModel):
     visual_asset_generator: Optional[VisualAssetGenerator] = Field(None, description="Visual asset generator configuration")
-    video_content_generator: Optional[VideoContentGenerator] = Field(None, description="Video content generator configuration")
     copy_content_generator: Optional[CopyContentGenerator] = Field(None, description="Copy content generator configuration")
     audience_intelligence_analyzer: Optional[AudienceIntelligenceAnalyzer] = Field(None, description="Audience intelligence analyzer configuration")
     campaign_timeline_optimizer: Optional[CampaignTimelineOptimizer] = Field(None, description="Campaign timeline optimizer configuration")
     content_distribution_scheduler: Optional[ContentDistributionScheduler] = Field(None, description="Content distribution scheduler configuration")
-    content_distribution_executor: Optional[ContentDistributionExecutor] = Field(None, description="Content distribution executor configuration")
-    outreach_call_scheduler: Optional[OutreachCallScheduler] = Field(None, description="Outreach call scheduler configuration")
-    voice_interaction_agent: Optional[VoiceInteractionAgent] = Field(None, description="Voice interaction agent configuration")
-    lead_discovery_engine: Optional[LeadDiscoveryEngine] = Field(None, description="Lead discovery engine configuration")
-    collaboration_outreach_composer: Optional[CollaborationOutreachComposer] = Field(None, description="Collaboration outreach composer configuration")
-    external_api_orchestrator: Optional[ExternalApiOrchestrator] = Field(None, description="External API orchestrator configuration")
 
 # Request/Response Models
 class QuickCampaignRequest(BaseModel):
@@ -427,6 +437,56 @@ class CampaignResponse(BaseModel):
     module_configurations: Optional[ModuleConfigurations] = Field(None, description="Prefilled module configurations")
     module_connections: Optional[List[ModuleConnections]] = Field(None, description="Module connections and data flow")
     timestamp: datetime = Field(default_factory=datetime.now)
+
+# Visual Asset Generator Models
+class VisualAssetRequest(BaseModel):
+    prompt: str = Field(..., description="Image generation prompt")
+    brand_guidelines: Optional[BrandGuidelines] = Field(None, description="Brand guidelines")
+    quantity: int = Field(1, description="Number of images to generate")
+    dimensions: Dimensions = Field(default_factory=lambda: Dimensions(width=512, height=512), description="Image dimensions")
+    image_style: Optional[List[str]] = Field(["photorealistic"], description="Image style options")
+    negative_prompts: Optional[List[str]] = Field(None, description="Negative prompts")
+
+class GeneratedImageResponse(BaseModel):
+    image_url: str = Field(..., description="Generated image URL")
+    image_id: str = Field(..., description="Unique image ID")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Image metadata")
+
+class GenerationMetadata(BaseModel):
+    model_used: str = Field("pollinations-ai", description="Model used for generation")
+    generation_time: datetime = Field(default_factory=datetime.now, description="Generation timestamp")
+    prompt_tokens: Optional[int] = Field(None, description="Number of prompt tokens")
+
+class VisualAssetResponse(BaseModel):
+    outputs: Dict[str, Any] = Field(..., description="Generated outputs")
+    generation_metadata: GenerationMetadata = Field(..., description="Generation metadata")
+    execution_status: str = Field(..., description="Execution status")
+
+# Copy Content Generator Models
+class CopyContentRequest(BaseModel):
+    content_purpose: List[str] = Field(..., description="Content purpose options")
+    campaign_brief: str = Field(..., description="Campaign brief")
+    tone_of_voice: List[str] = Field(..., description="Tone of voice options")
+    target_audience: TargetAudience = Field(..., description="Target audience")
+    word_count_range: WordCountRange = Field(..., description="Word count range")
+    keywords: Optional[List[str]] = Field(None, description="Keywords")
+    call_to_action: Optional[str] = Field(None, description="Call to action")
+    variations: int = Field(1, description="Number of variations")
+
+class GeneratedCopyResponse(BaseModel):
+    copy_text: str = Field(..., description="Generated content text")
+    copy_id: str = Field(..., description="Unique identifier for the copy")
+    word_count: int = Field(..., description="Actual word count")
+    hashtags: List[str] = Field(..., description="Best hashtags")
+    emojis: List[str] = Field(..., description="Best emojis")
+
+class SEOMetadata(BaseModel):
+    keyword_density: Dict[str, float] = Field(..., description="Keyword density analysis")
+    readability_score: float = Field(..., description="Readability score")
+
+class CopyContentResponse(BaseModel):
+    outputs: Dict[str, Any] = Field(..., description="Generated outputs")
+    execution_status: str = Field(..., description="Execution status")
 
 # FastAPI App Setup
 @asynccontextmanager
@@ -481,6 +541,296 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def generate_key_dates_from_brief(campaign_brief: str) -> List[KeyDate]:
+    """Generate key dates based on campaign brief and current month"""
+    from datetime import datetime, timedelta
+    
+    brief_lower = campaign_brief.lower()
+    current_date = datetime.now()
+    current_month = current_date.month
+    current_year = current_date.year
+    
+    key_dates = []
+    
+    # Generate dates based on campaign context
+    if "launch" in brief_lower or "new" in brief_lower:
+        # Product launch campaign
+        launch_date = current_date + timedelta(days=7)
+        key_dates.append(KeyDate(
+            date=launch_date.strftime("%Y-%m-%d"),
+            event="Product Launch",
+            priority=["high"]
+        ))
+        
+        # Pre-launch phase
+        pre_launch = current_date + timedelta(days=3)
+        key_dates.append(KeyDate(
+            date=pre_launch.strftime("%Y-%m-%d"),
+            event="Pre-Launch Campaign",
+            priority=["medium"]
+        ))
+        
+        # Post-launch follow-up
+        follow_up = launch_date + timedelta(days=7)
+        key_dates.append(KeyDate(
+            date=follow_up.strftime("%Y-%m-%d"),
+            event="Post-Launch Follow-up",
+            priority=["medium"]
+        ))
+    
+    elif "holiday" in brief_lower or "christmas" in brief_lower or "new year" in brief_lower:
+        # Holiday campaign
+        if current_month == 12:
+            key_dates.append(KeyDate(
+                date=f"{current_year}-12-25",
+                event="Christmas Day",
+                priority=["high"]
+            ))
+            key_dates.append(KeyDate(
+                date=f"{current_year}-12-24",
+                event="Christmas Eve",
+                priority=["high"]
+            ))
+        elif current_month == 1:
+            key_dates.append(KeyDate(
+                date=f"{current_year}-01-01",
+                event="New Year's Day",
+                priority=["high"]
+            ))
+            key_dates.append(KeyDate(
+                date=f"{current_year}-01-31",
+                event="January Campaign End",
+                priority=["medium"]
+            ))
+    
+    elif "environment" in brief_lower or "earth day" in brief_lower or "sustainability" in brief_lower:
+        # Environmental campaign
+        if current_month == 4:
+            key_dates.append(KeyDate(
+                date=f"{current_year}-04-22",
+                event="Earth Day",
+                priority=["high"]
+            ))
+        else:
+            # General environmental awareness
+            env_date = current_date + timedelta(days=14)
+            key_dates.append(KeyDate(
+                date=env_date.strftime("%Y-%m-%d"),
+                event="Environmental Awareness Day",
+                priority=["high"]
+            ))
+    
+    elif "fitness" in brief_lower or "health" in brief_lower or "wellness" in brief_lower:
+        # Health/fitness campaign
+        # New Year resolution period
+        if current_month == 1:
+            key_dates.append(KeyDate(
+                date=f"{current_year}-01-01",
+                event="New Year Fitness Resolution",
+                priority=["high"]
+            ))
+            key_dates.append(KeyDate(
+                date=f"{current_year}-01-15",
+                event="Mid-January Check-in",
+                priority=["medium"]
+            ))
+        else:
+            # General fitness campaign
+            fitness_date = current_date + timedelta(days=10)
+            key_dates.append(KeyDate(
+                date=fitness_date.strftime("%Y-%m-%d"),
+                event="Fitness Challenge Launch",
+                priority=["high"]
+            ))
+    
+    elif "sale" in brief_lower or "discount" in brief_lower or "promotion" in brief_lower:
+        # Sales campaign
+        sale_start = current_date + timedelta(days=5)
+        sale_end = sale_start + timedelta(days=7)
+        
+        key_dates.append(KeyDate(
+            date=sale_start.strftime("%Y-%m-%d"),
+            event="Sale Launch",
+            priority=["high"]
+        ))
+        key_dates.append(KeyDate(
+            date=sale_end.strftime("%Y-%m-%d"),
+            event="Sale End",
+            priority=["high"]
+        ))
+        
+        # Mid-sale reminder
+        mid_sale = sale_start + timedelta(days=3)
+        key_dates.append(KeyDate(
+            date=mid_sale.strftime("%Y-%m-%d"),
+            event="Mid-Sale Reminder",
+            priority=["medium"]
+        ))
+    
+    else:
+        # Default campaign timeline
+        week1 = current_date + timedelta(days=7)
+        week2 = current_date + timedelta(days=14)
+        week3 = current_date + timedelta(days=21)
+        week4 = current_date + timedelta(days=28)
+        
+        key_dates.extend([
+            KeyDate(
+                date=week1.strftime("%Y-%m-%d"),
+                event="Week 1 Campaign Review",
+                priority=["medium"]
+            ),
+            KeyDate(
+                date=week2.strftime("%Y-%m-%d"),
+                event="Mid-Campaign Assessment",
+                priority=["medium"]
+            ),
+            KeyDate(
+                date=week3.strftime("%Y-%m-%d"),
+                event="Campaign Optimization",
+                priority=["medium"]
+            ),
+            KeyDate(
+                date=week4.strftime("%Y-%m-%d"),
+                event="Campaign Conclusion",
+                priority=["high"]
+            )
+        ])
+    
+    return key_dates
+
+def generate_budget_constraints_from_brief(campaign_brief: str) -> Dict[str, Any]:
+    """Generate budget constraints based on campaign brief"""
+    brief_lower = campaign_brief.lower()
+    
+    # Default budget structure
+    budget_constraints = {
+        "daily_budget": 100,
+        "total_budget": 3000,
+        "platform_allocation": {
+            "Instagram": 40,
+            "Facebook": 30,
+            "LinkedIn": 20,
+            "Twitter": 10
+        },
+        "content_type_allocation": {
+            "visual_content": 50,
+            "video_content": 30,
+            "text_content": 20
+        }
+    }
+    
+    # Adjust budget based on campaign context
+    if "high budget" in brief_lower or "premium" in brief_lower or "enterprise" in brief_lower:
+        budget_constraints.update({
+            "daily_budget": 500,
+            "total_budget": 15000,
+            "platform_allocation": {
+                "Instagram": 35,
+                "Facebook": 25,
+                "LinkedIn": 25,
+                "TikTok": 15
+            },
+            "content_type_allocation": {
+                "visual_content": 40,
+                "video_content": 45,
+                "text_content": 15
+            }
+        })
+    
+    elif "low budget" in brief_lower or "startup" in brief_lower or "small" in brief_lower:
+        budget_constraints.update({
+            "daily_budget": 25,
+            "total_budget": 750,
+            "platform_allocation": {
+                "Instagram": 50,
+                "Facebook": 30,
+                "LinkedIn": 20
+            },
+            "content_type_allocation": {
+                "visual_content": 60,
+                "video_content": 20,
+                "text_content": 20
+            }
+        })
+    
+    elif "medium budget" in brief_lower or "moderate" in brief_lower:
+        budget_constraints.update({
+            "daily_budget": 200,
+            "total_budget": 6000,
+            "platform_allocation": {
+                "Instagram": 40,
+                "Facebook": 30,
+                "LinkedIn": 20,
+                "Twitter": 10
+            },
+            "content_type_allocation": {
+                "visual_content": 50,
+                "video_content": 30,
+                "text_content": 20
+            }
+        })
+    
+    # Adjust based on industry/context
+    if "tech" in brief_lower or "software" in brief_lower or "app" in brief_lower:
+        budget_constraints["platform_allocation"].update({
+            "LinkedIn": 30,
+            "Twitter": 20,
+            "Instagram": 30,
+            "Facebook": 20
+        })
+    
+    elif "fashion" in brief_lower or "lifestyle" in brief_lower or "beauty" in brief_lower:
+        budget_constraints["platform_allocation"].update({
+            "Instagram": 50,
+            "TikTok": 25,
+            "Facebook": 15,
+            "LinkedIn": 10
+        })
+        budget_constraints["content_type_allocation"].update({
+            "visual_content": 70,
+            "video_content": 25,
+            "text_content": 5
+        })
+    
+    elif "b2b" in brief_lower or "business" in brief_lower or "professional" in brief_lower:
+        budget_constraints["platform_allocation"].update({
+            "LinkedIn": 50,
+            "Facebook": 25,
+            "Twitter": 15,
+            "Instagram": 10
+        })
+        budget_constraints["content_type_allocation"].update({
+            "text_content": 40,
+            "visual_content": 40,
+            "video_content": 20
+        })
+    
+    elif "food" in brief_lower or "restaurant" in brief_lower or "coffee" in brief_lower:
+        budget_constraints["platform_allocation"].update({
+            "Instagram": 45,
+            "Facebook": 30,
+            "TikTok": 15,
+            "LinkedIn": 10
+        })
+        budget_constraints["content_type_allocation"].update({
+            "visual_content": 60,
+            "video_content": 30,
+            "text_content": 10
+        })
+    
+    # Add campaign-specific constraints
+    if "30 days" in brief_lower or "month" in brief_lower:
+        budget_constraints["campaign_duration"] = "30 days"
+    elif "week" in brief_lower:
+        budget_constraints["campaign_duration"] = "7 days"
+        budget_constraints["total_budget"] = budget_constraints["daily_budget"] * 7
+    elif "quarter" in brief_lower or "3 months" in brief_lower:
+        budget_constraints["campaign_duration"] = "90 days"
+        budget_constraints["total_budget"] = budget_constraints["daily_budget"] * 90
+    
+    return budget_constraints
 
 def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigurations:
     """Fallback module configuration extraction without external APIs"""
@@ -558,21 +908,6 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
         negative_prompts=["blurry", "low quality", "unprofessional"]
     )
     
-    video_content_generator = VideoContentGenerator(
-        content_type=["text_to_video", "image_sequence", "template_based"],
-        script=f"Engaging video script for {campaign_brief}",
-        image_inputs=[],
-        duration=30,
-        aspect_ratio=["16:9", "9:16", "1:1"],
-        background_music=BackgroundMusic(
-            music_style="upbeat",
-            volume=0.7
-        ),
-        voiceover=Voiceover(
-            voice_type="professional",
-            language="English"
-        )
-    )
     
     copy_content_generator = CopyContentGenerator(
         content_purpose=["social_caption", "ad_copy", "blog_post"],
@@ -612,8 +947,8 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
             min_posts_per_day=1,
             max_posts_per_day=3
         ),
-        key_dates=[],
-        budget_constraints={}
+        key_dates=generate_key_dates_from_brief(campaign_brief),
+        budget_constraints=generate_budget_constraints_from_brief(campaign_brief)
     )
     
     content_distribution_scheduler = ContentDistributionScheduler(
@@ -629,116 +964,13 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
         )
     )
     
-    content_distribution_executor = ContentDistributionExecutor(
-        distribution_schedule=[],
-        platform_credentials=PlatformCredentials(
-            platform_name="Instagram",
-            auth_token=None,
-            account_id=None
-        ),
-        execution_mode=["immediate"],
-        monitoring_enabled=True,
-        rollback_on_failure=True
-    )
-    
-    outreach_call_scheduler = OutreachCallScheduler(
-        discovered_leads=[],
-        call_window_preferences=CallWindowPreferences(
-            timezone="Asia/Kolkata",
-            preferred_hours=["10:00", "14:00", "16:00"],
-            avoid_dates=[]
-        ),
-        campaign_duration=CampaignDuration(
-            start_date="2024-01-01",
-            end_date="2024-01-31"
-        ),
-        calls_per_day=5,
-        prioritization_criteria=PrioritizationCriteria(
-            qualification_score_threshold=0.7,
-            priority_segments=["high-value", "engaged"]
-        )
-    )
-    
-    voice_interaction_agent = VoiceInteractionAgent(
-        call_schedule=[],
-        conversation_objective=["qualification", "demo_booking"],
-        call_script=CallScript(
-            opening="Hello, I'm calling about our new product launch",
-            talking_points=["product benefits", "special offers", "next steps"],
-            objection_handling={},
-            closing="Thank you for your time",
-            follow_up=["email follow-up", "demo scheduling"]
-        ),
-        voice_settings=VoiceSettings(
-            voice_type="professional",
-            speech_rate=1.0,
-            language="English"
-        ),
-        max_call_duration=300,
-        auto_dial=False
-    )
-    
-    lead_discovery_engine = LeadDiscoveryEngine(
-        search_criteria=SearchCriteria(
-            industry=["technology", "food & beverage"],
-            company_size="medium",
-            job_titles=["marketing manager", "brand manager"],
-            location="Mumbai"
-        ),
-        audience_segments=["primary", "secondary"],
-        data_sources=["linkedin", "company_databases"],
-        qualification_criteria=QualificationCriteria(
-            budget_range="medium",
-            decision_making_authority=True,
-            timeline="Q1 2024"
-        ),
-        max_leads=100,
-        enrichment_required=True
-    )
-    
-    collaboration_outreach_composer = CollaborationOutreachComposer(
-        target_profiles=[],
-        discovered_leads=[],
-        campaign_brief=campaign_brief,
-        generated_copies=[],
-        outreach_type=["collaboration", "sponsorship"],
-        personalization_level=["medium", "high"],
-        template_guidelines=TemplateGuidelines(
-            max_length=200,
-            tone="professional",
-            include_offer=True
-        )
-    )
-    
-    external_api_orchestrator = ExternalApiOrchestrator(
-        api_endpoint="https://api.example.com",
-        http_method=["GET", "POST"],
-        request_headers={},
-        request_body={},
-        authentication=Authentication(
-            auth_type=["bearer", "api_key"],
-            credentials={}
-        ),
-        retry_policy=RetryPolicy(
-            max_retries=3,
-            backoff_strategy=["exponential"]
-        ),
-        response_mapping={}
-    )
     
     return ModuleConfigurations(
         visual_asset_generator=visual_asset_generator,
-        video_content_generator=video_content_generator,
         copy_content_generator=copy_content_generator,
         audience_intelligence_analyzer=audience_intelligence_analyzer,
         campaign_timeline_optimizer=campaign_timeline_optimizer,
-        content_distribution_scheduler=content_distribution_scheduler,
-        content_distribution_executor=content_distribution_executor,
-        outreach_call_scheduler=outreach_call_scheduler,
-        voice_interaction_agent=voice_interaction_agent,
-        lead_discovery_engine=lead_discovery_engine,
-        collaboration_outreach_composer=collaboration_outreach_composer,
-        external_api_orchestrator=external_api_orchestrator
+        content_distribution_scheduler=content_distribution_scheduler
     )
 
 def get_module_connections() -> List[ModuleConnections]:
@@ -761,11 +993,6 @@ def get_module_connections() -> List[ModuleConnections]:
                     target_module="campaign_timeline_optimizer",
                     source_output="optimal_posting_times",
                     target_input="optimal_posting_times"
-                ),
-                ModuleConnection(
-                    target_module="lead_discovery_engine",
-                    source_output="audience_segments",
-                    target_input="audience_segments"
                 )
             ]
         ),
@@ -781,11 +1008,6 @@ def get_module_connections() -> List[ModuleConnections]:
                     target_module="content_distribution_scheduler",
                     source_output="generated_copies",
                     target_input="generated_copies"
-                ),
-                ModuleConnection(
-                    target_module="collaboration_outreach_composer",
-                    source_output="generated_copies",
-                    target_input="generated_copies"
                 )
             ]
         ),
@@ -793,24 +1015,9 @@ def get_module_connections() -> List[ModuleConnections]:
             module_name="visual_asset_generator",
             connections=[
                 ModuleConnection(
-                    target_module="video_content_generator",
-                    source_output="generated_images",
-                    target_input="image_inputs"
-                ),
-                ModuleConnection(
                     target_module="content_distribution_scheduler",
                     source_output="generated_images",
                     target_input="generated_images"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="video_content_generator",
-            connections=[
-                ModuleConnection(
-                    target_module="content_distribution_scheduler",
-                    source_output="video_url",
-                    target_input="video_url"
                 )
             ]
         ),
@@ -821,86 +1028,6 @@ def get_module_connections() -> List[ModuleConnections]:
                     target_module="content_distribution_scheduler",
                     source_output="optimized_timeline",
                     target_input="optimized_timeline"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="content_distribution_scheduler",
-            connections=[
-                ModuleConnection(
-                    target_module="content_distribution_executor",
-                    source_output="distribution_schedule",
-                    target_input="distribution_schedule"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="lead_discovery_engine",
-            connections=[
-                ModuleConnection(
-                    target_module="outreach_call_scheduler",
-                    source_output="discovered_leads",
-                    target_input="discovered_leads"
-                ),
-                ModuleConnection(
-                    target_module="collaboration_outreach_composer",
-                    source_output="discovered_leads",
-                    target_input="discovered_leads"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="outreach_call_scheduler",
-            connections=[
-                ModuleConnection(
-                    target_module="voice_interaction_agent",
-                    source_output="call_schedule",
-                    target_input="call_schedule"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="voice_interaction_agent",
-            connections=[
-                ModuleConnection(
-                    target_module="external_api_orchestrator",
-                    source_output="call_results",
-                    target_input="request_body"
-                ),
-                ModuleConnection(
-                    target_module="external_api_orchestrator",
-                    source_output="extracted_intelligence",
-                    target_input="request_body"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="collaboration_outreach_composer",
-            connections=[
-                ModuleConnection(
-                    target_module="content_distribution_executor",
-                    source_output="outreach_messages",
-                    target_input="distribution_schedule"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="content_distribution_executor",
-            connections=[
-                ModuleConnection(
-                    target_module="external_api_orchestrator",
-                    source_output="executed_posts",
-                    target_input="request_body"
-                )
-            ]
-        ),
-        ModuleConnections(
-            module_name="external_api_orchestrator",
-            connections=[
-                ModuleConnection(
-                    target_module="any_module",
-                    source_output="parsed_data",
-                    target_input="[compatible_field]"
                 )
             ]
         )
@@ -1247,191 +1374,338 @@ async def get_module_connections_endpoint():
         "description": "Predefined workflow connections between content generation modules"
     }
 
-# Email Campaign Models
-class EmailCampaignResponse(BaseModel):
-    message: str
-    total_emails_sent: int
-    successful_sends: int
-    failed_sends: int
-    failed_recipients: List[str]
-    timestamp: str
-
-class EmailStatus(BaseModel):
-    recipient_name: str
-    recipient_email: str
-    status: str
-    error_message: Optional[str] = None
-
-# Email Campaign Endpoint
-@app.post("/send-campaign-emails", response_model=EmailCampaignResponse)
-async def send_campaign_emails(
-    background_tasks: BackgroundTasks,
-    company_name: str = Form(..., description="Name of the company sending the emails"),
-    campaign_description: str = Form(..., description="Description of the marketing campaign"),
-    csv_file: UploadFile = File(..., description="CSV file with columns: Name, Email, Personal Description")
-):
+@app.post("/visual_asset_generator", response_model=VisualAssetResponse)
+async def generate_visual_assets(request: VisualAssetRequest):
     """
-    Send personalized campaign emails to recipients from CSV file
+    Generate visual assets using Pollinations AI
     
-    This endpoint accepts a CSV file with recipient information and sends
-    personalized marketing emails using AI-generated content.
-    
-    CSV Format Requirements:
-    - Name: Recipient's name
-    - Email: Recipient's email address  
-    - Personal Description: Personal interests/preferences for personalization
+    This endpoint generates images based on:
+    - Prompt description
+    - Brand guidelines (colors, style, logo)
+    - Quantity of images needed
+    - Dimensions (width, height)
+    - Image style preferences
+    - Negative prompts to avoid
     """
-    
-    # Validate file type
-    if not csv_file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="File must be a CSV file")
-    
-    # Validate environment variables
-    sender_email = os.getenv("SENDER_EMAIL")
-    sender_password = os.getenv("SENDER_PASSWORD")
-    groq_api_key = os.getenv("GROQ_API_KEY")
-    sender_name = os.getenv("SENDER_NAME", company_name)
-    
-    if not sender_email or not sender_password:
-        raise HTTPException(
-            status_code=500, 
-            detail="Missing SENDER_EMAIL or SENDER_PASSWORD in environment variables"
-        )
-    
-    if not groq_api_key:
-        raise HTTPException(
-            status_code=500,
-            detail="Missing GROQ_API_KEY in environment variables"
-        )
-    
     try:
-        # Read CSV content
-        content = await csv_file.read()
-        csv_content = content.decode('utf-8')
-        csv_reader = csv.DictReader(io.StringIO(csv_content))
+        # Enhance prompt with brand guidelines if provided
+        enhanced_prompt = request.prompt
         
-        # Validate CSV headers
-        required_headers = {'Name', 'Email', 'Personal Description'}
-        actual_headers = set(csv_reader.fieldnames or [])
+        if request.brand_guidelines:
+            if request.brand_guidelines.colors:
+                color_text = ", ".join(request.brand_guidelines.colors)
+                enhanced_prompt += f", {color_text} color scheme"
+            
+            if request.brand_guidelines.style:
+                enhanced_prompt += f", {request.brand_guidelines.style} style"
         
-        if not required_headers.issubset(actual_headers):
-            missing_headers = required_headers - actual_headers
-            raise HTTPException(
-                status_code=400,
-                detail=f"CSV missing required headers: {', '.join(missing_headers)}"
-            )
+        # Add negative prompts if provided
+        if request.negative_prompts:
+            negative_text = ", ".join(request.negative_prompts)
+            enhanced_prompt += f", avoid {negative_text}"
         
-        # Process emails in background
-        background_tasks.add_task(
-            process_email_campaign,
-            company_name,
-            campaign_description,
-            csv_content,
-            sender_email,
-            sender_password,
-            sender_name,
-            groq_api_key
+        # Determine image style based on request
+        image_style = "photorealistic"
+        if request.image_style:
+            if "illustration" in request.image_style:
+                image_style = "illustration"
+            elif "minimal" in request.image_style:
+                image_style = "minimal"
+            elif "abstract" in request.image_style:
+                image_style = "abstract"
+        
+        # Prepare arguments for the visual_asset_manager
+        args = {
+            "prompt": enhanced_prompt,
+            "quantity": request.quantity,
+            "dimensions": {
+                "width": request.dimensions.width,
+                "height": request.dimensions.height
+            },
+            "image_style": image_style
+        }
+        
+        # Generate images using the image.py service
+        result = visual_asset_manager(args)
+        
+        # Check for errors
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=f"Image generation error: {result['error']}")
+        
+        image_urls = result.get("image_urls", [])
+        
+        # Process results and create response
+        generated_images = []
+        successful_images = 0
+        failed_images = 0
+        
+        for i, image_url in enumerate(image_urls):
+            if isinstance(image_url, str):  # Successful generation
+                image_response = GeneratedImageResponse(
+                    image_url=image_url,
+                    image_id=f"img_{int(time.time())}_{i}",
+                    metadata={
+                        "prompt": enhanced_prompt,
+                        "style": image_style,
+                        "dimensions": {
+                            "width": request.dimensions.width,
+                            "height": request.dimensions.height
+                        },
+                        "generation_index": i
+                    }
+                )
+                generated_images.append(image_response)
+                successful_images += 1
+            else:  # Error case
+                failed_images += 1
+        
+        # Determine execution status
+        if successful_images == request.quantity:
+            execution_status = "success"
+        elif successful_images > 0:
+            execution_status = "partial_success"
+        else:
+            execution_status = "failed"
+        
+        # Create response
+        response = VisualAssetResponse(
+            outputs={
+                "generated_images": generated_images
+            },
+            generation_metadata=GenerationMetadata(
+                model_used="pollinations-ai",
+                generation_time=datetime.now(),
+                prompt_tokens=len(enhanced_prompt.split())
+            ),
+            execution_status=execution_status
         )
         
-        # Count recipients for immediate response
-        csv_reader_count = csv.DictReader(io.StringIO(csv_content))
-        recipient_count = sum(1 for _ in csv_reader_count)
-        
-        return EmailCampaignResponse(
-            message=f"Email campaign initiated successfully. Processing {recipient_count} recipients.",
-            total_emails_sent=recipient_count,
-            successful_sends=0,  # Will be updated in background
-            failed_sends=0,      # Will be updated in background
-            failed_recipients=[],
-            timestamp=datetime.now().isoformat()
-        )
+        return response
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing email campaign: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating visual assets: {str(e)}")
 
-async def process_email_campaign(
-    company_name: str,
-    campaign_description: str,
-    csv_content: str,
-    sender_email: str,
-    sender_password: str,
-    sender_name: str,
-    groq_api_key: str
-):
-    """Background task to process email campaign"""
+@app.post("/audience_intelligence_analyzer", response_model=AudienceIntelligenceResponse)
+async def analyze_audience(request: AudienceIntelligenceRequest):
+    """
+    Analyze audience intelligence and generate comprehensive insights
     
-    client = Groq(api_key=groq_api_key)
-    successful_sends = 0
-    failed_sends = 0
-    failed_recipients = []
+    This endpoint performs deep audience analysis including:
+    - Audience segmentation with demographics and psychographics
+    - Detailed persona profiles
+    - Platform recommendations
+    - Optimal posting times
+    - Content preferences
     
+    Uses LLM-powered analysis with real-time research capabilities.
+    """
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(sender_email, sender_password)
-            
-            csv_reader = csv.DictReader(io.StringIO(csv_content))
-            
-            for row in csv_reader:
+        print(f"🎯 Analyzing audience intelligence for {request.product_category} in {request.geographic_location.city or request.geographic_location.country}")
+        
+        # Call the audience intelligence analyzer
+        result = analyze_audience_intelligence(request)
+        
+        print(f"✅ Analysis completed with status: {result.execution_status}")
+        print(f"📊 Generated {len(result.outputs.get('audience_segments', []))} audience segments")
+        print(f"👥 Created {len(result.outputs.get('persona_profiles', []))} persona profiles")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error analyzing audience intelligence: {str(e)}")
+
+@app.post("/copy_content_generator", response_model=CopyContentResponse)
+async def generate_copy_content(request: CopyContentRequest):
+    """
+    Generate marketing copy content using AI
+    
+    This endpoint generates various types of marketing content including:
+    - Social media captions
+    - Ad copy
+    - Blog posts
+    - Email content
+    - Educational content
+    
+    Uses LLM-powered content generation with SEO optimization.
+    """
+    try:
+        print(f"📝 Generating copy content for: {request.campaign_brief}")
+        print(f"🎯 Content purposes: {request.content_purpose}")
+        print(f"🎨 Tone of voice: {request.tone_of_voice}")
+        
+        # Generate content for each purpose
+        all_generated_copies = []
+        
+        for content_type in request.content_purpose:
+            for tone in request.tone_of_voice:
                 try:
-                    name = row.get("Name", "").strip()
-                    email = row.get("Email", "").strip()
-                    personal_desc = row.get("Personal Description", "").strip()
+                    # Prepare target audience data
+                    target_audience_data = {
+                        "demographics": request.target_audience.demographics or "General audience",
+                        "psychographics": request.target_audience.psychographics or "General interests",
+                        "pain_points": request.target_audience.pain_points or ["General concerns"]
+                    }
                     
-                    if not name or not email:
-                        failed_recipients.append(f"{name} <{email}> - Missing name or email")
-                        failed_sends += 1
-                        continue
-                    
-                    # Generate personalized email content
-                    prompt = f"""
-                    You are an expert advertising copywriter for {company_name}.
-                    Write a personalized, friendly, and persuasive marketing email for a campaign.
-                    
-                    Campaign Description:
-                    {campaign_description}
-
-                    Recipient Details:
-                    Name: {name}
-                    Interests and Preferences: {personal_desc}
-
-                    Guidelines:
-                    - Keep it under 100 words.
-                    - Make it conversational and emotionally engaging.
-                    - Highlight how this offer or campaign benefits the recipient personally.
-                    - End with a warm closing from {company_name}.
-                    - Use the recipient's name naturally in the email.
-                    """
-
-                    response = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        messages=[{"role": "user", "content": prompt}]
+                    # Generate content using the copy_content_generator
+                    result = generate_social_content(
+                        content_type=content_type,
+                        campaign_brief=request.campaign_brief,
+                        tone_of_voice=tone,
+                        target_audience=target_audience_data,
+                        word_count_range={
+                            "min": request.word_count_range.min or 50,
+                            "max": request.word_count_range.max or 150
+                        }
                     )
-
-                    email_text = response.choices[0].message.content.strip()
-
-                    # Create and send email
-                    msg = MIMEText(email_text, "plain")
-                    msg["Subject"] = f"Special Offer from {company_name}!"
-                    msg["From"] = f"{sender_name} <{sender_email}>"
-                    msg["To"] = email
-
-                    server.send_message(msg)
-                    successful_sends += 1
-                    print(f"✅ Sent email to {name} ({email})")
                     
-                    # Small delay to avoid overwhelming the SMTP server
-                    await asyncio.sleep(0.5)
+                    # Process generated copies
+                    if "generated_copies" in result:
+                        for copy_data in result["generated_copies"]:
+                            # Add keywords and CTA if provided
+                            copy_text = copy_data.get("copy_text", "")
+                            
+                            # Enhance copy with keywords if provided
+                            if request.keywords:
+                                keyword_text = ", ".join(request.keywords[:3])  # Use top 3 keywords
+                                copy_text += f" {keyword_text}"
+                            
+                            # Add call to action if provided
+                            if request.call_to_action:
+                                copy_text += f" {request.call_to_action}"
+                            
+                            # Create response object
+                            copy_response = GeneratedCopyResponse(
+                                copy_text=copy_text,
+                                copy_id=f"{content_type}_{tone}_{len(all_generated_copies) + 1}",
+                                word_count=len(copy_text.split()),
+                                hashtags=copy_data.get("hashtags", []),
+                                emojis=copy_data.get("emojis", [])
+                            )
+                            
+                            all_generated_copies.append(copy_response)
+                            
+                            # Limit variations if specified
+                            if len(all_generated_copies) >= request.variations:
+                                break
                     
+                    if len(all_generated_copies) >= request.variations:
+                        break
+                        
                 except Exception as e:
-                    failed_recipients.append(f"{name} <{email}> - {str(e)}")
-                    failed_sends += 1
-                    print(f"❌ Failed to send email to {name} ({email}): {str(e)}")
-                    
+                    print(f"Error generating {content_type} with {tone} tone: {e}")
+                    continue
+        
+        # Calculate SEO metadata
+        seo_metadata = calculate_seo_metadata(all_generated_copies, request.keywords)
+        
+        # Create response
+        response = CopyContentResponse(
+            outputs={
+                "generated_copies": all_generated_copies,
+                "seo_metadata": seo_metadata
+            },
+            execution_status="success" if all_generated_copies else "failed"
+        )
+        
+        print(f"✅ Generated {len(all_generated_copies)} copy variations")
+        return response
+        
     except Exception as e:
-        print(f"❌ Email campaign failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating copy content: {str(e)}")
 
+def calculate_seo_metadata(copies: List[GeneratedCopyResponse], keywords: Optional[List[str]]) -> SEOMetadata:
+    """Calculate SEO metadata for generated copies"""
+    
+    if not copies:
+        return SEOMetadata(
+            keyword_density={},
+            readability_score=0.0
+        )
+    
+    # Calculate keyword density
+    keyword_density = {}
+    if keywords:
+        all_text = " ".join([copy.copy_text.lower() for copy in copies])
+        total_words = len(all_text.split())
+        
+        for keyword in keywords:
+            keyword_count = all_text.count(keyword.lower())
+            density = (keyword_count / total_words) * 100 if total_words > 0 else 0
+            keyword_density[keyword] = round(density, 2)
+    
+    # Calculate average readability score (simplified)
+    avg_word_count = sum(len(copy.copy_text.split()) for copy in copies) / len(copies)
+    readability_score = min(100, max(0, 100 - (avg_word_count - 50) * 0.5))
+    
+    return SEOMetadata(
+        keyword_density=keyword_density,
+        readability_score=round(readability_score, 1)
+    )
 
+@app.post("/campaign_timeline_optimizer", response_model=CampaignTimelineResponse)
+async def optimize_timeline(request: CampaignTimelineRequest):
+    """
+    Optimize campaign timeline using AI-powered scheduling
+    
+    This endpoint creates strategic campaign timelines including:
+    - Real-time date analysis and event detection
+    - Audience behavior pattern analysis
+    - Platform-specific optimal posting times
+    - Content distribution scheduling
+    - Budget-aware timeline optimization
+    - Engagement maximization strategies
+    
+    Uses LLM-powered analysis with web search capabilities.
+    """
+    try:
+        print(f"📅 Optimizing campaign timeline from {request.campaign_duration.start_date} to {request.campaign_duration.end_date}")
+        print(f"🎯 Audience segments: {request.audience_segments}")
+        print(f"📱 Content inventory: {len(request.content_inventory)} items")
+        
+        # Call the campaign timeline optimizer
+        result = optimize_campaign_timeline(request)
+        
+        print(f"✅ Timeline optimization completed with status: {result.execution_status}")
+        print(f"📊 Generated {len(result.outputs.get('optimized_timeline', []))} timeline slots")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error optimizing campaign timeline: {str(e)}")
+
+@app.post("/content_distribution_scheduler", response_model=ContentDistributionResponse)
+async def schedule_content_distribution_endpoint(request: ContentDistributionRequest):
+    """
+    Schedule content distribution with detailed posting plans
+    
+    This endpoint creates detailed posting schedules including:
+    - Specific content assignments to timeline slots
+    - Platform-optimized copy text and assets
+    - Detailed posting parameters (hashtags, mentions, location tags)
+    - Platform compliance checking
+    - Execution notes and optimization recommendations
+    - Comprehensive schedule summaries
+    
+    Takes optimized timeline from campaign_timeline_optimizer and content assets
+    from copy_content_generator and visual_asset_generator to create actionable
+    posting schedules.
+    """
+    try:
+        print(f"📅 Scheduling content distribution for {len(request.optimized_timeline)} timeline slots")
+        print(f"📝 Available copies: {len(request.generated_copies)}")
+        print(f"🖼️ Available images: {len(request.generated_images) if request.generated_images else 0}")
+        print(f"📱 Platform: {request.platform_specifications.platform_name}")
+        
+        # Call the content distribution scheduler
+        result = schedule_content_distribution(request)
+        
+        print(f"✅ Content distribution scheduling completed with status: {result.execution_status}")
+        print(f"📊 Generated {len(result.outputs.get('distribution_schedule', []))} schedule items")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error scheduling content distribution: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -23,7 +23,9 @@ import { useCampaignStore } from "@/stores/campaignStore";
 import { Sidebar } from "./Sidebar";
 import { CampaignCalendar } from "./CampaignCalendar";
 import { MODULE_DEFINITIONS, CONNECTION_MATRIX } from "@/lib/moduleDefinitions";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Play, Square } from "lucide-react";
+import { WorkflowExecutionService } from "@/lib/workflowExecution";
+import { getStoredCampaignResponse } from "@/lib/backendWorkflowGenerator";
 
 const nodeTypes = {
   module: GenericModuleNode,
@@ -40,7 +42,7 @@ interface CampaignCanvasProps {
 const defaultEdgeOptions = {
   animated: false, // Disable animation for clearer visual state
   style: { 
-    stroke: '#94a3b8', 
+    stroke: '#8b5cf6', 
     strokeWidth: 2,
   },
   type: 'smoothstep',
@@ -53,7 +55,9 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isMinimapCollapsed, setIsMinimapCollapsed] = React.useState(false);
   const [showCalendar, setShowCalendar] = React.useState(false);
-  const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview } = useCampaignStore();
+  const [isExecutingWorkflow, setIsExecutingWorkflow] = React.useState(false);
+  const [executionProgress, setExecutionProgress] = React.useState<{completed: number, total: number}>({completed: 0, total: 0});
+  const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview, setExecutionResult } = useCampaignStore();
 
   // Update nodes and edges when props change
   useEffect(() => {
@@ -273,9 +277,54 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
     setNodes((nds) => nds.concat(newNode));
   }, [reactFlowInstance, setNodes]);
 
+  const handleRunWorkflow = useCallback(async () => {
+    if (isExecutingWorkflow) {
+      // TODO: Add ability to cancel workflow execution
+      setIsExecutingWorkflow(false);
+      return;
+    }
+
+    setIsExecutingWorkflow(true);
+    setExecutionProgress({ completed: 0, total: nodes.length });
+
+    try {
+      // Get module connections from stored campaign response
+      const campaignResponse = getStoredCampaignResponse();
+      const connections = campaignResponse?.module_connections || [];
+
+      // Execute workflow
+      const results = await WorkflowExecutionService.executeWorkflow(
+        nodes.map(node => ({
+          id: node.id,
+          data: {
+            module_name: node.data.module_name as string,
+            inputs: node.data.inputs as Record<string, any>
+          }
+        })),
+        connections,
+        (nodeId, result) => {
+          // On node completion
+          setExecutionResult(nodeId, result);
+          setExecutionProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
+        },
+        (nodeId) => {
+          // On node start
+          console.log(`Starting execution of node: ${nodeId}`);
+        }
+      );
+
+      console.log('Workflow execution completed:', results);
+    } catch (error) {
+      console.error('Workflow execution failed:', error);
+    } finally {
+      setIsExecutingWorkflow(false);
+      setExecutionProgress({ completed: 0, total: 0 });
+    }
+  }, [nodes, isExecutingWorkflow, setExecutionResult]);
+
   return (
     <>
-      <div className="h-screen w-full flex overflow-hidden">
+      <div className="h-full w-full flex overflow-hidden">
         <div className="flex-1 relative h-full">
           <ReactFlow
             nodes={nodes}
@@ -296,14 +345,22 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
             elementsSelectable={true}
             deleteKeyCode="Delete"
             fitView
-            className="bg-gray-50 h-full w-full"
+            className="bg-slate-900/50 h-full w-full backdrop-blur-sm"
             attributionPosition="bottom-left"
           >
-            <Background />
-            <Controls />
+            <Background 
+              color="#475569" 
+              gap={16}
+              size={1}
+              className="opacity-30"
+            />
+            <Controls 
+              className="bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl"
+            />
             {!isMinimapCollapsed && (
               <MiniMap
-                className="!bg-white"
+                className="!bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl"
+                maskColor="rgb(15 23 42 / 0.6)"
                 nodeColor={(node) => {
                   switch (node.type) {
                     case "input":
@@ -323,22 +380,29 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
             )}
           </ReactFlow>
           
-          {/* Minimap Toggle Button */}
-          <button
-            onClick={() => setIsMinimapCollapsed(!isMinimapCollapsed)}
-            className="absolute bottom-4 right-4 bg-white border border-gray-300 rounded-md p-2 text-xs shadow-sm hover:bg-gray-50 z-10 flex items-center justify-center"
-            title={isMinimapCollapsed ? 'Show Minimap' : 'Hide Minimap'}
-          >
-            {isMinimapCollapsed ? (
-              <Eye className="w-4 h-4" />
-            ) : (
-              <EyeOff className="w-4 h-4" />
-            )}
-          </button>
+          {/* Control Buttons */}
+          <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
+            {/* Minimap Toggle Button */}
+            <button
+              onClick={() => setIsMinimapCollapsed(!isMinimapCollapsed)}
+              className="bg-white border border-gray-300 rounded-md p-2 text-xs shadow-sm hover:bg-gray-50 flex items-center justify-center"
+              title={isMinimapCollapsed ? 'Show Minimap' : 'Hide Minimap'}
+            >
+              {isMinimapCollapsed ? (
+                <Eye className="w-4 h-4" />
+              ) : (
+                <EyeOff className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         </div>
         <Sidebar 
           onAddModule={handleAddModule}
           onRunCampaign={() => setShowCalendar(true)}
+          onRunWorkflow={handleRunWorkflow}
+          isExecutingWorkflow={isExecutingWorkflow}
+          executionProgress={executionProgress}
+          nodesCount={nodes.length}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
@@ -346,13 +410,13 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
 
       {/* Calendar Modal */}
       {showCalendar && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-[95vw] h-[95vh] relative">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-[95vw] h-[95vh] relative">
             <button
               onClick={() => setShowCalendar(false)}
-              className="absolute top-4 right-4 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100"
+              className="absolute top-4 right-4 z-10 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-full p-2.5 shadow-xl hover:bg-slate-700 transition-all duration-200 group"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-slate-300 group-hover:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

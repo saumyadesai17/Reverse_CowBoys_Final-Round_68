@@ -103,15 +103,15 @@ function extractProductCategory(brief: string): string {
   return "general";
 }
 
-// Position nodes in a logical flow layout
+// Position nodes in a logical flow layout with generous spacing
 function calculateNodePosition(index: number, total: number): { x: number; y: number } {
-  const startX = 100;
-  const startY = 100;
-  const horizontalSpacing = 350;
-  const verticalSpacing = 200;
+  const startX = 150;
+  const startY = 150;
+  const horizontalSpacing = 500;  // Increased from 350 to prevent horizontal overlap
+  const verticalSpacing = 400;   // Increased from 200 to prevent vertical overlap
   
-  // Arrange in a grid-like pattern
-  const nodesPerRow = 3;
+  // Arrange in a grid-like pattern with fewer nodes per row for better spacing
+  const nodesPerRow = Math.min(3, Math.ceil(Math.sqrt(total))); // Adaptive grid based on total nodes
   const row = Math.floor(index / nodesPerRow);
   const col = index % nodesPerRow;
   

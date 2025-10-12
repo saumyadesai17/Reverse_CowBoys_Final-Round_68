@@ -4,13 +4,15 @@ import React, { memo, useState } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Play, Pause } from "lucide-react";
+import { Settings, Play, Pause, Eye, CheckCircle2, XCircle, Loader2, Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { MODULE_DEFINITIONS } from "@/lib/moduleDefinitions";
+import { WorkflowExecutionService, ExecutionResult } from "@/lib/workflowExecution";
+import { OutputViewer } from "@/components/workflow/OutputViewer";
 
 interface GenericModuleNodeProps extends NodeProps {
   data: {
@@ -18,13 +20,51 @@ interface GenericModuleNodeProps extends NodeProps {
     isActive: boolean;
     module_name: string;
     inputs: Record<string, any>;
+    executionStatus?: 'idle' | 'running' | 'success' | 'error';
+    executionResult?: ExecutionResult;
   };
 }
 
+// Helper function to ensure values are compatible with input types
+const getSafeValue = (value: any, inputType: string): string => {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  
+  // For complex types (arrays/objects), return JSON representation for primitive input fields
+  if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  
+  switch (inputType) {
+    case "string":
+      return String(value);
+    
+    case "integer":
+      const numValue = Number(value);
+      return isNaN(numValue) ? "0" : String(numValue);
+    
+    case "enum":
+      return String(value);
+    
+    case "boolean":
+      return String(Boolean(value));
+    
+    default:
+      return String(value);
+  }
+};
+
 export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => {
-  const { selectedNodeId, updateModule, connectionPreview } = useCampaignStore();
+  const { selectedNodeId, updateModule, connectionPreview, executionResults, setExecutionResult } = useCampaignStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputs, setInputs] = useState(data.inputs || {});
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [showOutputViewer, setShowOutputViewer] = useState(false);
 
   const moduleDefinition = MODULE_DEFINITIONS[data.module_name as keyof typeof MODULE_DEFINITIONS];
   const isSelected = selectedNodeId === id;
@@ -45,18 +85,221 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
     updateModule(id, { ...data, inputs: newInputs });
   };
 
+  // Get execution result from store
+  const executionResult = executionResults[id];
+  const executionStatus = isExecuting ? 'running' : executionResult?.execution_status;
+
+  const handleExecute = async () => {
+    if (isExecuting) return;
+    
+    setIsExecuting(true);
+    try {
+      const result = await WorkflowExecutionService.executeModule(data.module_name, inputs);
+      setExecutionResult(id, result);
+    } catch (error) {
+      console.error('Execution failed:', error);
+      setExecutionResult(id, {
+        outputs: {},
+        execution_status: 'error',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const getExecutionStatusIcon = () => {
+    switch (executionStatus) {
+      case 'running':
+        return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />;
+      case 'success':
+        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+      case 'error':
+        return <XCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const hasOutput = executionResult && executionResult.execution_status === 'success' && executionResult.outputs;
+
+  // Helper function to render object key-value pairs (read-only structure, editable values)
+  const renderObjectField = (inputKey: string, value: Record<string, any>) => {
+    const objectEntries = Object.entries(value);
+    
+    return (
+      <div className="space-y-3">
+        {objectEntries.map(([key, val], index) => (
+          <div key={`${inputKey}-${key}-${index}`} className="space-y-2">
+            <Label className="text-xs text-slate-300 capitalize font-medium">
+              {key.replace(/_/g, " ")}:
+            </Label>
+            
+            {/* Check if this property should be an array based on the value */}
+            {Array.isArray(val) ? (
+              <div className="ml-2">
+                <div className="space-y-2">
+                  {val.map((item, itemIndex) => (
+                    <div key={`${inputKey}-${key}-${itemIndex}`} className="flex items-center gap-2">
+                      <Input
+                        value={typeof item === 'object' ? JSON.stringify(item) : String(item)}
+                        onChange={(e) => {
+                          const newArray = [...val];
+                          try {
+                            newArray[itemIndex] = JSON.parse(e.target.value);
+                          } catch {
+                            newArray[itemIndex] = e.target.value;
+                          }
+                          updateInput(inputKey, { ...value, [key]: newArray });
+                        }}
+                        placeholder={`${key} ${itemIndex + 1}`}
+                        className="flex-1 text-xs bg-slate-600/50 border-slate-500 text-white placeholder:text-slate-400 focus:border-violet-500"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const newArray = val.filter((_, i) => i !== itemIndex);
+                          updateInput(inputKey, { ...value, [key]: newArray });
+                        }}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      updateInput(inputKey, { ...value, [key]: [...val, ""] });
+                    }}
+                    className="w-full text-violet-400 hover:text-violet-300 hover:bg-violet-500/20"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Add {key.replace(/_/g, " ")}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* Regular property input */
+              <Input
+                value={typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                onChange={(e) => {
+                  try {
+                    const parsedValue = JSON.parse(e.target.value);
+                    updateInput(inputKey, { ...value, [key]: parsedValue });
+                  } catch {
+                    updateInput(inputKey, { ...value, [key]: e.target.value });
+                  }
+                }}
+                placeholder={`Enter ${key.replace(/_/g, " ")}`}
+                className="text-xs bg-slate-600/50 border-slate-500 text-white placeholder:text-slate-400 focus:border-violet-500"
+              />
+            )}
+          </div>
+        ))}
+        {objectEntries.length === 0 && (
+          <div className="text-xs text-slate-500 italic">No properties defined</div>
+        )}
+      </div>
+    );
+  };
+
+  // Helper function to render arrays
+  const renderArrayField = (inputKey: string, value: any[]) => {
+    return (
+      <div className="space-y-2">
+        {value.map((item, index) => (
+          <div key={`${inputKey}-${index}`} className="flex items-center gap-2">
+            <Input
+              value={typeof item === 'object' ? JSON.stringify(item) : String(item)}
+              onChange={(e) => {
+                const newArray = [...value];
+                try {
+                  newArray[index] = JSON.parse(e.target.value);
+                } catch {
+                  newArray[index] = e.target.value;
+                }
+                updateInput(inputKey, newArray);
+              }}
+              placeholder={`Item ${index + 1}`}
+              className="flex-1 text-xs bg-slate-600/50 border-slate-500 text-white placeholder:text-slate-400 focus:border-violet-500"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const newArray = value.filter((_, i) => i !== index);
+                updateInput(inputKey, newArray);
+              }}
+              className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+            >
+              <Minus className="w-3 h-3" />
+            </Button>
+          </div>
+        ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            updateInput(inputKey, [...value, ""]);
+          }}
+          className="w-full text-violet-400 hover:text-violet-300 hover:bg-violet-500/20"
+        >
+          <Plus className="w-3 h-3 mr-1" />
+          Add Item
+        </Button>
+      </div>
+    );
+  };
+
   const renderInputField = (inputKey: string, inputDef: any) => {
-    const value = inputs[inputKey] || inputDef.default || "";
+    let value = inputs[inputKey];
+    
+    // Handle default values
+    if (value === undefined || value === null) {
+      if (inputDef.type === "array") {
+        value = [];
+      } else if (inputDef.type === "object") {
+        value = {};
+      } else {
+        value = inputDef.default || "";
+      }
+    }
+
+    // Handle array type based on schema definition
+    if (inputDef.type === "array" || Array.isArray(value)) {
+      return (
+        <div className="space-y-2">
+          <Label className="text-xs text-slate-400">Array Items:</Label>
+          {renderArrayField(inputKey, Array.isArray(value) ? value : [])}
+        </div>
+      );
+    }
+
+    // Handle object type based on schema definition
+    if (inputDef.type === "object" || (value && typeof value === 'object' && !Array.isArray(value))) {
+      return (
+        <div className="space-y-2">
+          <Label className="text-xs text-slate-400">Object Properties:</Label>
+          {renderObjectField(inputKey, typeof value === 'object' && value !== null ? value : {})}
+        </div>
+      );
+    }
+    
+    // Ensure value is compatible with the input type
+    const safeValue = getSafeValue(value, inputDef.type);
 
     switch (inputDef.type) {
       case "string":
         return (
           <Input
             key={inputKey}
-            value={value}
+            value={safeValue}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateInput(inputKey, e.target.value)}
             placeholder={inputDef.description || `Enter ${inputKey}`}
-            className="text-xs"
+            className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
           />
         );
       
@@ -67,9 +310,9 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             type="number"
             min={inputDef.min}
             max={inputDef.max}
-            value={value}
+            value={safeValue}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateInput(inputKey, parseInt(e.target.value) || 0)}
-            className="text-xs"
+            className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
           />
         );
       
@@ -77,15 +320,15 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
         return (
           <Select 
             key={inputKey}
-            value={value} 
+            value={safeValue} 
             onValueChange={(selectedValue: string) => updateInput(inputKey, selectedValue)}
           >
-            <SelectTrigger className="text-xs">
+            <SelectTrigger className="text-xs bg-slate-700/50 border-slate-600 text-white focus:border-violet-500">
               <SelectValue placeholder={`Select ${inputKey}`} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-slate-800 border-slate-700">
               {inputDef.values?.map((option: string) => (
-                <SelectItem key={option} value={option}>
+                <SelectItem key={option} value={option} className="text-white hover:bg-slate-700 focus:bg-slate-700">
                   {option.replace(/_/g, " ").toUpperCase()}
                 </SelectItem>
               ))}
@@ -97,15 +340,15 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
         return (
           <Select 
             key={inputKey}
-            value={value?.toString()} 
+            value={safeValue} 
             onValueChange={(selectedValue: string) => updateInput(inputKey, selectedValue === "true")}
           >
-            <SelectTrigger className="text-xs">
+            <SelectTrigger className="text-xs bg-slate-700/50 border-slate-600 text-white focus:border-violet-500">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">Yes</SelectItem>
-              <SelectItem value="false">No</SelectItem>
+            <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectItem value="true" className="text-white hover:bg-slate-700 focus:bg-slate-700">Yes</SelectItem>
+              <SelectItem value="false" className="text-white hover:bg-slate-700 focus:bg-slate-700">No</SelectItem>
             </SelectContent>
           </Select>
         );
@@ -123,7 +366,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
               }
             }}
             placeholder={`Enter ${inputKey} (JSON)`}
-            className="text-xs"
+            className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
           />
         );
     }
@@ -193,8 +436,12 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
   return (
     <div className="relative">
       <Card 
-        className={`w-80 ${isSelected ? "ring-2 ring-blue-500" : ""} ${data.isActive ? `border-[${moduleDefinition.color}]` : ""}`}
-        style={{ borderColor: data.isActive ? moduleDefinition.color : undefined }}
+        className={`w-80 bg-slate-800/90 backdrop-blur-sm transition-all duration-200 ${
+          isSelected 
+            ? "ring-2 ring-violet-500 shadow-xl shadow-violet-500/20 border-violet-500" 
+            : "border-slate-700 hover:border-slate-600"
+        } ${data.isActive ? `border-2` : ""}`}
+        style={{ borderColor: data.isActive && !isSelected ? moduleDefinition.color : undefined }}
       >
         {/* Input Handles */}
         {inputKeys.map((key, index) => {
@@ -205,7 +452,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
               type="target"
               position={Position.Left}
               id={key}
-              className={`w-4 h-4 border-2 border-white shadow-md transition-all duration-200 ${
+              className={`w-4 h-4 border-2 border-slate-900 shadow-md transition-all duration-200 ${
                 isCompatible ? 'animate-pulse ring-2 ring-green-400' : ''
               }`}
               style={{ 
@@ -224,22 +471,48 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: moduleDefinition.color }}
               />
-              <span className="font-medium text-sm">ID: {data.id}</span>
-              <Badge variant={data.isActive ? "default" : "secondary"}>
+              <span className="font-medium text-sm text-white">ID: {data.id}</span>
+              <Badge 
+                variant={data.isActive ? "default" : "secondary"}
+                className={data.isActive ? "bg-violet-600 text-white" : "bg-slate-700 text-slate-300"}
+              >
                 {data.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center ml-3 gap-1">
+              {/* Execution Status Indicator */}
+              {getExecutionStatusIcon()}
+              
+              {/* Execute Button */}
+              {WorkflowExecutionService.isModuleExecutable(data.module_name) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleExecute}
+                  disabled={isExecuting}
+                  title={isExecuting ? "Executing..." : "Execute Module"}
+                >
+                  {isExecuting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Play className="w-4 h-4" />
+                  )}
+                </Button>
+              )}
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+              className="text-slate-300 hover:text-violet-400 hover:bg-slate-700"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           <div>
-            <h3 className="font-medium text-sm">{moduleDefinition.display_name}</h3>
-            <p className="text-xs text-gray-600">{moduleDefinition.description}</p>
+            <h3 className="font-medium text-sm text-white">{moduleDefinition.display_name}</h3>
+            <p className="text-xs text-slate-400">{moduleDefinition.description}</p>
           </div>
         </CardHeader>
 
@@ -247,23 +520,37 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
           <div className="flex items-center justify-between">
             <Badge 
               variant="outline" 
-              className="text-xs"
+              className="text-xs border-slate-600"
               style={{ color: moduleDefinition.color }}
             >
               {moduleDefinition.category}
             </Badge>
+            
+            {/* Output View Button - Bottom Right */}
+            {hasOutput && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowOutputViewer(true)}
+                className="ml-auto bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                title="View Generated Output"
+              >
+                <Eye className="w-3 h-3 mr-1" />
+                Output
+              </Button>
+            )}
           </div>
 
           {isExpanded && (
-            <div className="space-y-3 pt-3 border-t max-h-64 overflow-y-auto">
+            <div className="space-y-3 pt-3 border-t border-slate-700">
               {inputKeys.map((inputKey) => {
                 const inputDef = (moduleDefinition.inputs as any)[inputKey];
                 return (
                   <div key={inputKey} className="space-y-1">
-                    <Label className="text-xs flex items-center gap-1">
+                    <Label className="text-xs flex items-center gap-1 text-slate-300">
                       {inputKey.replace(/_/g, " ")}
                       {inputDef?.required && (
-                        <span className="text-red-500">*</span>
+                        <span className="text-red-400">*</span>
                       )}
                     </Label>
                     {renderInputField(inputKey, inputDef)}
@@ -284,7 +571,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             type="source"
             position={Position.Right}
             id={key}
-            className="w-4 h-4 border-2 border-white shadow-md"
+            className="w-4 h-4 border-2 border-slate-900 shadow-md"
             style={{ 
               top: startPosition + (index * handleSpacing),
               backgroundColor: moduleDefinition.color
@@ -303,12 +590,12 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             return (
               <div 
                 key={key} 
-                className={`absolute text-xs px-2 py-1 rounded shadow border text-right transition-all duration-200 whitespace-nowrap ${
+                className={`absolute text-xs px-2 py-1 rounded shadow-lg border text-right transition-all duration-200 whitespace-nowrap ${
                   isCompatible 
-                    ? 'bg-green-100 border-green-400 text-green-800 font-semibold animate-pulse scale-110' 
+                    ? 'bg-green-500 border-green-600 text-white font-semibold animate-pulse scale-110' 
                     : isConnectionActive
-                    ? 'bg-gray-50 border-gray-200 text-gray-500'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'bg-slate-800/90 backdrop-blur-sm border-slate-700 text-slate-400'
+                    : 'bg-slate-800/90 backdrop-blur-sm text-slate-200 border-slate-700'
                 }`}
                 style={{ 
                   top: `${startPosition + (index * handleSpacing) - 12}px`,
@@ -326,12 +613,12 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             return (
               <div 
                 key={key} 
-                className={`absolute text-xs px-2 py-1 rounded shadow border text-left transition-all duration-200 whitespace-nowrap ${
+                className={`absolute text-xs px-2 py-1 rounded shadow-lg border text-left transition-all duration-200 whitespace-nowrap ${
                   isSourceHandle
-                    ? 'bg-blue-100 border-blue-400 text-blue-800 font-semibold ring-2 ring-blue-300'
+                    ? 'bg-violet-500 border-violet-600 text-white font-semibold ring-2 ring-violet-400'
                     : isConnectionActive
-                    ? 'bg-gray-50 border-gray-200 text-gray-500'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'bg-slate-800/90 backdrop-blur-sm border-slate-700 text-slate-400'
+                    : 'bg-slate-800/90 backdrop-blur-sm text-slate-200 border-slate-700'
                 }`}
                 style={{ 
                   top: `${startPosition + (index * handleSpacing) - 12}px`,
@@ -343,6 +630,15 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
             );
           })}
         </>
+      )}
+      
+      {/* Output Viewer Modal */}
+      {showOutputViewer && executionResult && (
+        <OutputViewer
+          moduleName={data.module_name}
+          result={executionResult}
+          onClose={() => setShowOutputViewer(false)}
+        />
       )}
     </div>
   );
