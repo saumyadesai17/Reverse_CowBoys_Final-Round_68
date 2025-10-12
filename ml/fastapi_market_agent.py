@@ -473,6 +473,32 @@ class CopyContentRequest(BaseModel):
     call_to_action: Optional[str] = Field(None, description="Call to action")
     variations: int = Field(1, description="Number of variations")
 
+# Email Campaign Models
+class EmailRecipient(BaseModel):
+    name: str = Field(..., description="Recipient name")
+    email: str = Field(..., description="Recipient email address")
+    personal_description: str = Field(..., description="Personal interests and preferences")
+
+class EmailCampaignRequest(BaseModel):
+    company_name: str = Field(..., description="Company name")
+    campaign_description: str = Field(..., description="Campaign description")
+    recipients: List[EmailRecipient] = Field(..., description="List of email recipients")
+    sender_name: Optional[str] = Field(None, description="Sender name (defaults to company name)")
+    email_subject: Optional[str] = Field(None, description="Email subject (defaults to 'Special Offer from {company_name}!')")
+
+class EmailDeliveryStatus(BaseModel):
+    recipient_name: str = Field(..., description="Recipient name")
+    recipient_email: str = Field(..., description="Recipient email")
+    status: str = Field(..., description="Delivery status: 'sent', 'failed'")
+    error_message: Optional[str] = Field(None, description="Error message if failed")
+    email_content: Optional[str] = Field(None, description="Generated email content")
+
+class EmailCampaignResponse(BaseModel):
+    campaign_summary: Dict[str, Any] = Field(..., description="Campaign summary")
+    delivery_results: List[EmailDeliveryStatus] = Field(..., description="Email delivery results")
+    execution_status: str = Field(..., description="Execution status: 'success', 'partial_success', 'failed'")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Execution timestamp")
+
 class GeneratedCopyResponse(BaseModel):
     copy_text: str = Field(..., description="Generated content text")
     copy_id: str = Field(..., description="Unique identifier for the copy")
@@ -1706,6 +1732,169 @@ async def schedule_content_distribution_endpoint(request: ContentDistributionReq
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error scheduling content distribution: {str(e)}")
+
+@app.post("/email_campaign", response_model=EmailCampaignResponse)
+async def send_email_campaign(request: EmailCampaignRequest):
+    """
+    Send personalized email campaign using AI-generated content
+    
+    This endpoint sends personalized marketing emails to a list of recipients including:
+    - AI-generated personalized email content for each recipient
+    - Personalized subject lines and sender information
+    - Campaign-specific messaging based on recipient interests
+    - Delivery status tracking for each email
+    - Comprehensive campaign summary and results
+    
+    Requirements:
+    - GROQ_API_KEY environment variable must be set
+    - SENDER_EMAIL environment variable must be set
+    - SENDER_PASSWORD environment variable must be set (Gmail app password recommended)
+    - SENDER_NAME environment variable (optional, defaults to company name)
+    
+    The AI generates unique, personalized content for each recipient based on:
+    - Company name and campaign description
+    - Recipient's personal interests and preferences
+    - Conversational and emotionally engaging tone
+    - Under 100 words per email
+    - Personalized benefits and offers
+    """
+    try:
+        print(f"📧 Starting email campaign for {request.company_name}")
+        print(f"📝 Campaign: {request.campaign_description}")
+        print(f"👥 Recipients: {len(request.recipients)}")
+        
+        # Initialize Groq client
+        groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        
+        # Get email credentials
+        sender_email = os.getenv("SENDER_EMAIL")
+        sender_password = os.getenv("SENDER_PASSWORD")
+        sender_name = request.sender_name or os.getenv("SENDER_NAME", request.company_name)
+        
+        if not sender_email or not sender_password:
+            raise HTTPException(
+                status_code=400, 
+                detail="Missing SENDER_EMAIL or SENDER_PASSWORD in environment variables. Please set these to send emails."
+            )
+        
+        if not os.getenv("GROQ_API_KEY"):
+            raise HTTPException(
+                status_code=400,
+                detail="Missing GROQ_API_KEY in environment variables. Please set this to generate email content."
+            )
+        
+        # Track delivery results
+        delivery_results = []
+        successful_sends = 0
+        failed_sends = 0
+        
+        # Send emails using SMTP
+        try:
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.starttls()
+                server.login(sender_email, sender_password)
+                
+                for recipient in request.recipients:
+                    try:
+                        # Generate personalized email content using Groq
+                        prompt = f"""
+                        You are an expert advertising copywriter for {request.company_name}.
+                        Write a personalized, friendly, and persuasive marketing email for a campaign.
+                        
+                        Campaign Description:
+                        {request.campaign_description}
+
+                        Recipient Details:
+                        Name: {recipient.name}
+                        Interests and Preferences: {recipient.personal_description}
+
+                        Guidelines:
+                        - Keep it under 100 words.
+                        - Make it conversational and emotionally engaging.
+                        - Highlight how this offer or campaign benefits the recipient personally.
+                        - End with a warm closing from {request.company_name}.
+                        """
+                        
+                        response = groq_client.chat.completions.create(
+                            model="llama-3.1-8b-instant",
+                            messages=[{"role": "user", "content": prompt}]
+                        )
+                        
+                        email_content = response.choices[0].message.content.strip()
+                        
+                        # Create email message
+                        msg = MIMEText(email_content, "plain")
+                        msg["Subject"] = request.email_subject or f"Special Offer from {request.company_name}!"
+                        msg["From"] = f"{sender_name} <{sender_email}>"
+                        msg["To"] = recipient.email
+                        
+                        # Send email
+                        server.send_message(msg)
+                        
+                        # Track successful delivery
+                        delivery_results.append(EmailDeliveryStatus(
+                            recipient_name=recipient.name,
+                            recipient_email=recipient.email,
+                            status="sent",
+                            error_message=None,
+                            email_content=email_content
+                        ))
+                        
+                        successful_sends += 1
+                        print(f"✅ Sent email to {recipient.name} ({recipient.email})")
+                        
+                    except Exception as e:
+                        # Track failed delivery
+                        delivery_results.append(EmailDeliveryStatus(
+                            recipient_name=recipient.name,
+                            recipient_email=recipient.email,
+                            status="failed",
+                            error_message=str(e),
+                            email_content=None
+                        ))
+                        
+                        failed_sends += 1
+                        print(f"❌ Failed to send email to {recipient.name} ({recipient.email}): {e}")
+                        continue
+        
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"SMTP connection error: {str(e)}")
+        
+        # Determine execution status
+        if successful_sends == len(request.recipients):
+            execution_status = "success"
+        elif successful_sends > 0:
+            execution_status = "partial_success"
+        else:
+            execution_status = "failed"
+        
+        # Create campaign summary
+        campaign_summary = {
+            "company_name": request.company_name,
+            "campaign_description": request.campaign_description,
+            "total_recipients": len(request.recipients),
+            "successful_sends": successful_sends,
+            "failed_sends": failed_sends,
+            "success_rate": round((successful_sends / len(request.recipients)) * 100, 2) if request.recipients else 0,
+            "sender_name": sender_name,
+            "sender_email": sender_email
+        }
+        
+        # Create response
+        response = EmailCampaignResponse(
+            campaign_summary=campaign_summary,
+            delivery_results=delivery_results,
+            execution_status=execution_status,
+            timestamp=datetime.now()
+        )
+        
+        print(f"✅ Email campaign completed: {successful_sends}/{len(request.recipients)} emails sent successfully")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error sending email campaign: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
