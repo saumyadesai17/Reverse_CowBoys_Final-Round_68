@@ -160,7 +160,7 @@ def analyze_platform_requirements(platform_specs: PlatformSpecifications) -> Dic
 def match_content_to_timeline(timeline_slots: List[OptimizedTimeline], 
                             copies: List[GeneratedCopy], 
                             images: Optional[List[GeneratedImage]] = None) -> Dict[str, Any]:
-    """Match content assets to timeline slots based on content type and platform"""
+    """Match content assets to timeline slots with unique image distribution"""
     
     content_matching = {
         "matched_slots": [],
@@ -183,11 +183,9 @@ def match_content_to_timeline(timeline_slots: List[OptimizedTimeline],
         "general": copies  # Fallback pool
     }
     
-    image_pools = {
-        "social": [img for img in (images or []) if "social" in img.image_id.lower()],
-        "ad": [img for img in (images or []) if "ad" in img.image_id.lower()],
-        "general": images or []  # Fallback pool
-    }
+    # Create available image pools (will be consumed as we assign them)
+    available_images = list(images) if images else []
+    used_image_ids = set()  # Track used images to ensure uniqueness
     
     for slot in timeline_slots:
         matched_content = {
@@ -208,21 +206,49 @@ def match_content_to_timeline(timeline_slots: List[OptimizedTimeline],
                 matched_content["assigned_copy"] = random.choice(copy_pools["general"])
                 matched_content["matching_score"] += 0.2
         
-        # Match images based on content type and platform
+        # Assign images with smart cycling when fewer images than posts
         platform = slot.platform.lower()
-        if "social" in content_type or "instagram" in platform:
-            if image_pools["social"]:
-                matched_content["assigned_images"] = random.sample(image_pools["social"], min(2, len(image_pools["social"])))
-                matched_content["matching_score"] += 0.3
-        elif "ad" in content_type or "facebook" in platform:
-            if image_pools["ad"]:
-                matched_content["assigned_images"] = random.sample(image_pools["ad"], min(1, len(image_pools["ad"])))
-                matched_content["matching_score"] += 0.3
+        assigned_images = []
+        
+        # Determine how many images to assign based on platform
+        if "instagram" in platform or "facebook" in platform:
+            max_images = 2  # Instagram/Facebook can handle multiple images
         else:
-            # Use general image pool
-            if image_pools["general"]:
-                matched_content["assigned_images"] = random.sample(image_pools["general"], min(1, len(image_pools["general"])))
-                matched_content["matching_score"] += 0.2
+            max_images = 1  # LinkedIn and others typically uses single images
+        
+        if available_images:
+            # First, try to assign unused images
+            unused_images = [img for img in available_images if img.image_id not in used_image_ids]
+            
+            # If we have unused images, use them first
+            if unused_images:
+                images_to_assign = min(max_images, len(unused_images))
+                assigned_images = unused_images[:images_to_assign]
+                for img in assigned_images:
+                    used_image_ids.add(img.image_id)
+            else:
+                # If all images have been used once, start cycling through them
+                # Reset the used tracking and start over
+                if len(used_image_ids) >= len(available_images):
+                    # Calculate how many times we've cycled through all images
+                    cycle_count = len([slot for slot in content_matching["matched_slots"] if slot["assigned_images"]])
+                    
+                    # Use modulo to cycle through available images
+                    start_index = cycle_count % len(available_images)
+                    images_to_assign = min(max_images, len(available_images))
+                    
+                    # Cycle through images starting from calculated index
+                    for i in range(images_to_assign):
+                        img_index = (start_index + i) % len(available_images)
+                        assigned_images.append(available_images[img_index])
+                else:
+                    # Fallback: assign any available images
+                    images_to_assign = min(max_images, len(available_images))
+                    assigned_images = available_images[:images_to_assign]
+        
+        matched_content["assigned_images"] = assigned_images
+        if assigned_images:
+            matched_content["matching_score"] += 0.3
         
         if matched_content["assigned_copy"]:
             # Convert assigned_copy to dict for JSON serialization
@@ -554,6 +580,12 @@ def create_fallback_schedule(request: ContentDistributionRequest, content_matchi
             asset_ids = [img["image_id"] for img in assigned_images] if assigned_images else []
             asset_urls = [img["image_url"] for img in assigned_images] if assigned_images else []
             
+            # Only use actual asset URLs from visual asset generator
+            # If no assets provided, we should not generate fallback dummy images
+            if not asset_urls:
+                print(f"⚠️ No visual assets provided for slot {schedule_id}. Consider running visual asset generator first.")
+                asset_ids = []
+            
             content_package = {
                 "copy_id": assigned_copy["copy_id"],
                 "copy_text": assigned_copy["copy_text"][:request.platform_specifications.max_caption_length],
@@ -603,7 +635,7 @@ if __name__ == "__main__":
         optimized_timeline=[
             OptimizedTimeline(
                 timeline_slot_id="slot_001",
-                scheduled_date="2024-01-01",
+                scheduled_date="2025-01-01",
                 content_type="social_caption",
                 platform="Instagram",
                 target_segment="millennials",

@@ -310,8 +310,8 @@ export class WorkflowExecutionService {
         
         const result = {
           "campaign_duration": {
-            "start_date": "2024-12-01",
-            "end_date": "2024-12-31"
+            "start_date": "2025-12-01",
+            "end_date": "2025-12-31"
           },
           "content_inventory": [
             {
@@ -341,22 +341,22 @@ export class WorkflowExecutionService {
           },
           "key_dates": [
             {
-              "date": "2024-12-25",
+              "date": "2025-12-25",
               "event": "Christmas Day",
               "priority": ["high"]
             },
             {
-              "date": "2024-12-24",
+              "date": "2025-12-24",
               "event": "Christmas Eve",
               "priority": ["high"]
             },
             {
-              "date": "2024-12-31",
+              "date": "2025-12-31",
               "event": "New Years Eve",
               "priority": ["high"]
             },
             {
-              "date": "2024-12-15",
+              "date": "2025-12-15",
               "event": "Mid-December Sale",
               "priority": ["medium"]
             }

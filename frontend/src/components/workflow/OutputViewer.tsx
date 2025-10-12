@@ -243,6 +243,51 @@ export function OutputViewer({ moduleName, result, onClose }: OutputViewerProps)
       return (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-white">Campaign Schedule Calendar</h3>
+          
+          {/* Visual Assets Integration Notice */}
+          {(() => {
+            const totalAssets = outputs.distribution_schedule?.reduce((count: number, item: any) => {
+              return count + (item.content_package?.asset_urls?.length || 0);
+            }, 0) || 0;
+            
+            const postsWithImages = outputs.distribution_schedule?.filter((item: any) => 
+              item.content_package?.asset_urls?.length > 0
+            ).length || 0;
+            
+            return (
+              <Card className="bg-blue-900/20 border-blue-700 p-4">
+                <div className="flex items-start gap-3">
+                  <ImageIcon className="w-5 h-5 text-blue-400 mt-0.5" />
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-blue-200">Visual Assets Integration</h4>
+                    {totalAssets > 0 ? (
+                      <div className="space-y-1 text-sm">
+                        <p className="text-blue-300">
+                          ✅ Successfully mapped {totalAssets} images from Visual Asset Generator
+                        </p>
+                        <p className="text-blue-400">
+                          📊 {postsWithImages}/{outputs.distribution_schedule?.length} posts have visual content
+                        </p>
+                        <p className="text-xs text-blue-500">
+                          Click on any calendar card to view the generated images and detailed information
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1 text-sm">
+                        <p className="text-orange-300">
+                          ⚠️ No visual assets mapped - run Visual Asset Generator first
+                        </p>
+                        <p className="text-xs text-orange-400">
+                          Visual assets enhance engagement and provide rich content for your campaigns
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            );
+          })()}
+          
           <div className="h-[600px] w-full">
             <CampaignCalendarWithTimeline timelineData={outputs.distribution_schedule} />
           </div>
@@ -281,6 +326,45 @@ export function OutputViewer({ moduleName, result, onClose }: OutputViewerProps)
               )}
             </Card>
           )}
+          
+          {/* Visual Assets Preview */}
+          {(() => {
+            const sampleImages = outputs.distribution_schedule
+              ?.flatMap((item: any) => item.content_package?.asset_urls || [])
+              .slice(0, 4) || [];
+            
+            if (sampleImages.length > 0) {
+              return (
+                <Card className="bg-slate-800 border-slate-700 p-4">
+                  <h4 className="font-medium text-white mb-3 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    Visual Assets Preview
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {sampleImages.map((url: string, index: number) => (
+                      <div key={index} className="relative group">
+                        <img 
+                          src={url} 
+                          alt={`Generated Asset ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg border border-slate-600"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 rounded-lg transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <ExternalLink className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1 rounded">
+                          AI
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Click on calendar cards to see detailed information and all associated images
+                  </p>
+                </Card>
+              );
+            }
+            return null;
+          })()}
         </div>
       );
     }
@@ -333,7 +417,7 @@ export function OutputViewer({ moduleName, result, onClose }: OutputViewerProps)
         role="dialog"
         aria-modal="true"
         aria-labelledby={headingId}
-        className="bg-slate-900 border border-slate-700 rounded-xl w-[90%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl"
+        className="bg-slate-900 border border-slate-700 rounded-xl w-[98%] max-w-[98%] max-h-[90vh] overflow-hidden flex flex-col shadow-xl"
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
       >

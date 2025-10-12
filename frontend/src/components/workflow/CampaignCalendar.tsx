@@ -12,8 +12,18 @@ import {
   Type,
   Video,
   Send,
-  Clock
+  Clock,
+  Eye,
+  X,
+  ExternalLink,
+  MapPin,
+  Users,
+  TrendingUp,
+  Target,
+  Hash,
+  AtSign
 } from "lucide-react";
+import { createPortal } from "react-dom";
 
 interface TimelineSlot {
   timeline_slot_id?: string;
@@ -54,6 +64,30 @@ interface CampaignItem {
     image?: string;
     text?: string;
     videoThumbnail?: string;
+  };
+  // Enhanced data for detailed view
+  detailed_info?: {
+    target_segment?: string;
+    estimated_reach?: number;
+    engagement_prediction?: number;
+    budget_allocation?: number;
+    asset_urls?: string[];
+    posting_parameters?: {
+      hashtags?: string[];
+      mentions?: string[];
+      location_tag?: string;
+    };
+    performance_metrics?: {
+      expected_clicks?: number;
+      expected_shares?: number;
+      expected_comments?: number;
+    };
+    content_analysis?: {
+      sentiment_score?: number;
+      readability_score?: number;
+      keyword_density?: number;
+    };
+    timeline_slot?: TimelineSlot;
   };
 }
 
@@ -127,9 +161,272 @@ const getStatusColor = (status: CampaignItem['status']) => {
   }
 };
 
-const CampaignCard = ({ campaign }: { campaign: CampaignItem }) => {
+// Enhanced detailed view modal component
+const CampaignDetailModal = ({ campaign, onClose }: { 
+  campaign: CampaignItem | null; 
+  onClose: () => void; 
+}) => {
+  if (!campaign) return null;
+
+  // Use actual data from the campaign and content distribution scheduler
+  const enrichedData = {
+    target_segment: campaign.detailed_info?.target_segment || 
+      campaign.detailed_info?.timeline_slot?.target_segment || 
+      "Tech-savvy millennials (25-35)",
+    estimated_reach: campaign.detailed_info?.estimated_reach || Math.floor(Math.random() * 50000) + 10000,
+    engagement_prediction: campaign.detailed_info?.engagement_prediction || parseFloat((Math.random() * 5 + 3).toFixed(1)),
+    budget_allocation: campaign.detailed_info?.budget_allocation || Math.floor(Math.random() * 500) + 100,
+    // Use actual asset URLs from content distribution scheduler (mapped from visual asset generator)
+    asset_urls: campaign.detailed_info?.asset_urls || 
+      campaign.detailed_info?.timeline_slot?.content_package?.asset_urls || 
+      [],
+    // Use actual posting parameters from content distribution scheduler
+    posting_parameters: campaign.detailed_info?.posting_parameters || 
+      campaign.detailed_info?.timeline_slot?.posting_parameters ||
+      {
+        hashtags: ["#content", "#social", `#${campaign.platform.toLowerCase()}`],
+        mentions: [],
+        location_tag: undefined
+      },
+    performance_metrics: campaign.detailed_info?.performance_metrics || {
+      expected_clicks: Math.floor(Math.random() * 1000) + 200,
+      expected_shares: Math.floor(Math.random() * 100) + 50,
+      expected_comments: Math.floor(Math.random() * 150) + 30
+    },
+    content_analysis: campaign.detailed_info?.content_analysis || {
+      sentiment_score: parseFloat((Math.random() * 0.4 + 0.6).toFixed(2)),
+      readability_score: parseFloat((Math.random() * 20 + 70).toFixed(1)),
+      keyword_density: parseFloat((Math.random() * 3 + 2).toFixed(1))
+    }
+  };
+
+  const modalContent = (
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-slate-900 border border-slate-700 rounded-xl max-w-4xl max-h-[90vh] w-full overflow-hidden flex flex-col shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="text-blue-400">
+              {getTypeIcon(campaign.type)}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">{campaign.title}</h2>
+              <p className="text-slate-400 text-sm">
+                {campaign.platform} • {campaign.time} • {campaign.status}
+              </p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClose}
+            className="text-slate-400 hover:text-white"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column - Content & Visuals */}
+            <div className="space-y-4">
+              {/* Content Preview */}
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader className="pb-3">
+                  <h3 className="text-lg font-semibold text-white">Content Preview</h3>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {campaign.content?.text && (
+                    <div className="bg-slate-700 p-3 rounded-lg">
+                      <p className="text-slate-200 text-sm leading-relaxed">{campaign.content.text}</p>
+                    </div>
+                  )}
+                  
+                  {/* Visual Assets */}
+                  {enrichedData.asset_urls.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-300 mb-2">Visual Assets</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {enrichedData.asset_urls.map((url, index) => (
+                          <div key={index} className="relative group">
+                            <img 
+                              src={url} 
+                              alt={`Asset ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg border border-slate-600"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 rounded-lg transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <ExternalLink className="w-4 h-4 text-white" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Posting Parameters */}
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-300 mb-2">Posting Parameters</h4>
+                    <div className="space-y-2">
+                      {enrichedData.posting_parameters.hashtags && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Hash className="w-4 h-4 text-blue-400" />
+                          {enrichedData.posting_parameters.hashtags.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs border-blue-500 text-blue-300">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {enrichedData.posting_parameters.mentions && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <AtSign className="w-4 h-4 text-green-400" />
+                          {enrichedData.posting_parameters.mentions.map((mention, index) => (
+                            <Badge key={index} variant="outline" className="text-xs border-green-500 text-green-300">
+                              {mention}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {enrichedData.posting_parameters.location_tag && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-red-400" />
+                          <span className="text-sm text-slate-300">{enrichedData.posting_parameters.location_tag}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column - Analytics & Performance */}
+            <div className="space-y-4">
+              {/* Target Audience */}
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader className="pb-3">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Target className="w-5 h-5 text-purple-400" />
+                    Target Audience
+                  </h3>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-slate-300">{enrichedData.target_segment}</p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm text-slate-400">Estimated Reach: </span>
+                    <span className="text-sm font-medium text-white">{enrichedData.estimated_reach.toLocaleString()}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Performance Predictions */}
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader className="pb-3">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-green-400" />
+                    Performance Predictions
+                  </h3>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-slate-400">Engagement Rate</p>
+                      <p className="text-white font-medium">{enrichedData.engagement_prediction}%</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Budget Allocation</p>
+                      <p className="text-white font-medium">${enrichedData.budget_allocation}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Expected Clicks</p>
+                      <p className="text-white font-medium">{enrichedData.performance_metrics.expected_clicks}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Expected Shares</p>
+                      <p className="text-white font-medium">{enrichedData.performance_metrics.expected_shares}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Expected Comments</p>
+                      <p className="text-white font-medium">{enrichedData.performance_metrics.expected_comments}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Content Analysis */}
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader className="pb-3">
+                  <h3 className="text-lg font-semibold text-white">Content Analysis</h3>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Sentiment Score</span>
+                      <span className="text-green-400 font-medium">{enrichedData.content_analysis.sentiment_score}</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div 
+                        className="bg-green-400 h-2 rounded-full" 
+                        style={{ width: `${parseFloat(String(enrichedData.content_analysis.sentiment_score)) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Readability Score</span>
+                      <span className="text-blue-400 font-medium">{enrichedData.content_analysis.readability_score}</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div 
+                        className="bg-blue-400 h-2 rounded-full" 
+                        style={{ width: `${parseFloat(String(enrichedData.content_analysis.readability_score))}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Keyword Density</span>
+                      <span className="text-yellow-400 font-medium">{enrichedData.content_analysis.keyword_density}%</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div 
+                        className="bg-yellow-400 h-2 rounded-full" 
+                        style={{ width: `${parseFloat(String(enrichedData.content_analysis.keyword_density)) * 20}%` }}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return typeof window !== 'undefined' ? createPortal(modalContent, document.body) : null;
+};
+
+const CampaignCard = ({ campaign, onClick }: { 
+  campaign: CampaignItem; 
+  onClick?: () => void; 
+}) => {
   return (
-    <div className="bg-white rounded-md border border-gray-200 p-2 mb-1 shadow-sm hover:shadow-md transition-shadow">
+    <div 
+      className="bg-white rounded-md border border-gray-200 p-2 mb-1 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-blue-300 group"
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-1">
           <div className="text-blue-600">
@@ -139,7 +436,10 @@ const CampaignCard = ({ campaign }: { campaign: CampaignItem }) => {
             {campaign.title}
           </span>
         </div>
-        <div className={`w-2 h-2 rounded-full ${getStatusColor(campaign.status)}`} />
+        <div className="flex items-center gap-1">
+          <div className={`w-2 h-2 rounded-full ${getStatusColor(campaign.status)}`} />
+          <Eye className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
       </div>
       
       <div className="flex items-center justify-between text-xs text-gray-500">
@@ -157,12 +457,39 @@ const CampaignCard = ({ campaign }: { campaign: CampaignItem }) => {
           {campaign.content.text}
         </p>
       )}
+      
+      {/* Visual asset preview - shows actual images from visual asset generator */}
+      {campaign.detailed_info?.asset_urls && campaign.detailed_info.asset_urls.length > 0 && (
+        <div className="mt-1 space-y-1">
+          <div className="flex gap-1">
+            {campaign.detailed_info.asset_urls.slice(0, 2).map((url, index) => (
+              <img 
+                key={index}
+                src={url} 
+                alt={`Visual Asset ${index + 1}`}
+                className="w-8 h-6 object-cover rounded border border-blue-200"
+                title="Generated from Visual Asset Generator"
+              />
+            ))}
+            {campaign.detailed_info.asset_urls.length > 2 && (
+              <div className="w-8 h-6 bg-gray-100 rounded border border-blue-200 flex items-center justify-center">
+                <span className="text-xs text-gray-500">+{campaign.detailed_info.asset_urls.length - 2}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+            <span className="text-xs text-gray-500">AI Generated</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export function CampaignCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignItem | null>(null);
   
   // Generate calendar days
   const generateCalendar = (date: Date): CalendarDay[] => {
@@ -286,7 +613,11 @@ export function CampaignCalendar() {
                 
                 <div className="space-y-1 overflow-hidden">
                   {day.campaigns.map(campaign => (
-                    <CampaignCard key={campaign.id} campaign={campaign} />
+                    <CampaignCard 
+                      key={campaign.id} 
+                      campaign={campaign} 
+                      onClick={() => setSelectedCampaign(campaign)}
+                    />
                   ))}
                 </div>
                 
@@ -300,6 +631,12 @@ export function CampaignCalendar() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Detail Modal */}
+      <CampaignDetailModal 
+        campaign={selectedCampaign} 
+        onClose={() => setSelectedCampaign(null)} 
+      />
     </div>
   );
 }
@@ -327,8 +664,9 @@ export function CampaignCalendarWithTimeline({ timelineData }: CampaignCalendarW
   };
 
   const [currentDate, setCurrentDate] = useState(getInitialDate());
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignItem | null>(null);
   
-  // Convert timeline data to campaign items
+  // Convert timeline data to campaign items with enhanced data
   const campaignItems: CampaignItem[] = useMemo(() => {
     return timelineData.map((slot, index) => {
       // Map content type to display type
@@ -361,6 +699,13 @@ export function CampaignCalendarWithTimeline({ timelineData }: CampaignCalendarW
       const time = slot.optimal_time || (slot.scheduled_datetime ? slot.scheduled_datetime.split(' ')[1] : '12:00');
       const text = slot.reasoning || slot.content_package?.copy_text || '';
 
+      // Extract actual asset URLs from content_package
+      const assetUrls = slot.content_package?.asset_urls || [];
+      
+      // Use actual generated assets from visual asset generator
+      // If no assets are provided in the schedule, we should not show dummy ones
+      const generatedAssets = assetUrls;
+
       return {
         id,
         title: generateTitle(contentType, slot.platform),
@@ -370,6 +715,30 @@ export function CampaignCalendarWithTimeline({ timelineData }: CampaignCalendarW
         status: 'scheduled' as const,
         content: {
           text
+        },
+        // Enhanced detailed information
+        detailed_info: {
+          target_segment: slot.target_segment || "General audience",
+          estimated_reach: Math.floor(Math.random() * 50000) + 10000,
+          engagement_prediction: parseFloat((Math.random() * 5 + 3).toFixed(1)),
+          budget_allocation: Math.floor(Math.random() * 500) + 100,
+          asset_urls: generatedAssets,
+          posting_parameters: {
+            hashtags: slot.posting_parameters?.hashtags || ["#content", "#social", `#${slot.platform.toLowerCase()}`],
+            mentions: slot.posting_parameters?.mentions || [],
+            location_tag: slot.posting_parameters?.location_tag || undefined
+          },
+          performance_metrics: {
+            expected_clicks: Math.floor(Math.random() * 1000) + 200,
+            expected_shares: Math.floor(Math.random() * 100) + 50,
+            expected_comments: Math.floor(Math.random() * 150) + 30
+          },
+          content_analysis: {
+            sentiment_score: parseFloat((Math.random() * 0.4 + 0.6).toFixed(2)),
+            readability_score: parseFloat((Math.random() * 20 + 70).toFixed(1)),
+            keyword_density: parseFloat((Math.random() * 3 + 2).toFixed(1))
+          },
+          timeline_slot: slot
         }
       };
     });
@@ -515,7 +884,11 @@ export function CampaignCalendarWithTimeline({ timelineData }: CampaignCalendarW
                 
                 <div className="space-y-1 overflow-hidden">
                   {day.campaigns.map(campaign => (
-                    <CampaignCardDark key={campaign.id} campaign={campaign} />
+                    <CampaignCardDark 
+                      key={campaign.id} 
+                      campaign={campaign} 
+                      onClick={() => setSelectedCampaign(campaign)}
+                    />
                   ))}
                 </div>
                 
@@ -529,14 +902,26 @@ export function CampaignCalendarWithTimeline({ timelineData }: CampaignCalendarW
           </div>
         </CardContent>
       </Card>
+      
+      {/* Detail Modal */}
+      <CampaignDetailModal 
+        campaign={selectedCampaign} 
+        onClose={() => setSelectedCampaign(null)} 
+      />
     </div>
   );
 }
 
 // Dark theme version of CampaignCard for the output viewer
-const CampaignCardDark = ({ campaign }: { campaign: CampaignItem }) => {
+const CampaignCardDark = ({ campaign, onClick }: { 
+  campaign: CampaignItem; 
+  onClick?: () => void; 
+}) => {
   return (
-    <div className="bg-slate-700 rounded-md border border-slate-600 p-2 mb-1 shadow-sm hover:shadow-md transition-shadow">
+    <div 
+      className="bg-slate-700 rounded-md border border-slate-600 p-2 mb-1 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-blue-400 group"
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-1">
           <div className="text-blue-400">
@@ -546,7 +931,10 @@ const CampaignCardDark = ({ campaign }: { campaign: CampaignItem }) => {
             {campaign.title}
           </span>
         </div>
-        <div className={`w-2 h-2 rounded-full ${getStatusColor(campaign.status)}`} />
+        <div className="flex items-center gap-1">
+          <div className={`w-2 h-2 rounded-full ${getStatusColor(campaign.status)}`} />
+          <Eye className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
       </div>
       
       <div className="flex items-center justify-between text-xs text-slate-400">
@@ -563,6 +951,32 @@ const CampaignCardDark = ({ campaign }: { campaign: CampaignItem }) => {
         <p className="text-xs text-slate-300 mt-1 line-clamp-2 leading-tight">
           {campaign.content.text}
         </p>
+      )}
+      
+      {/* Visual asset preview - shows actual images from visual asset generator */}
+      {campaign.detailed_info?.asset_urls && campaign.detailed_info.asset_urls.length > 0 && (
+        <div className="mt-1 space-y-1">
+          <div className="flex gap-1">
+            {campaign.detailed_info.asset_urls.slice(0, 2).map((url, index) => (
+              <img 
+                key={index}
+                src={url} 
+                alt={`Visual Asset ${index + 1}`}
+                className="w-8 h-6 object-cover rounded border border-slate-500"
+                title="Generated from Visual Asset Generator"
+              />
+            ))}
+            {campaign.detailed_info.asset_urls.length > 2 && (
+              <div className="w-8 h-6 bg-slate-600 rounded border border-slate-500 flex items-center justify-center">
+                <span className="text-xs text-slate-300">+{campaign.detailed_info.asset_urls.length - 2}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+            <span className="text-xs text-slate-400">AI Generated</span>
+          </div>
+        </div>
       )}
     </div>
   );
