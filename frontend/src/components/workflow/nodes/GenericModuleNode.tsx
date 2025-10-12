@@ -4,7 +4,7 @@ import React, { memo, useState } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Play, Pause, Eye, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Settings, Play, Pause, Eye, CheckCircle2, XCircle, Loader2, Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,35 +31,30 @@ const getSafeValue = (value: any, inputType: string): string => {
     return "";
   }
   
+  // For complex types (arrays/objects), return JSON representation for primitive input fields
+  if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  
   switch (inputType) {
     case "string":
-      if (Array.isArray(value)) {
-        return value.length > 0 ? String(value[0]) : "";
-      }
       return String(value);
     
     case "integer":
-      if (Array.isArray(value)) {
-        return value.length > 0 ? String(value[0]) : "0";
-      }
-      return String(value);
+      const numValue = Number(value);
+      return isNaN(numValue) ? "0" : String(numValue);
     
     case "enum":
-      if (Array.isArray(value)) {
-        return value.length > 0 ? String(value[0]) : "";
-      }
       return String(value);
     
     case "boolean":
-      if (Array.isArray(value)) {
-        return value.length > 0 ? String(Boolean(value[0])) : "false";
-      }
       return String(Boolean(value));
     
     default:
-      if (Array.isArray(value)) {
-        return value.length > 0 ? String(value[0]) : "";
-      }
       return String(value);
   }
 };
@@ -128,12 +123,169 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
 
   const hasOutput = executionResult && executionResult.execution_status === 'success' && executionResult.outputs;
 
+  // Helper function to render object key-value pairs (read-only structure, editable values)
+  const renderObjectField = (inputKey: string, value: Record<string, any>) => {
+    const objectEntries = Object.entries(value);
+    
+    return (
+      <div className="space-y-3">
+        {objectEntries.map(([key, val], index) => (
+          <div key={`${inputKey}-${key}-${index}`} className="space-y-2">
+            <Label className="text-xs text-slate-300 capitalize font-medium">
+              {key.replace(/_/g, " ")}:
+            </Label>
+            
+            {/* Check if this property should be an array based on the value */}
+            {Array.isArray(val) ? (
+              <div className="ml-2">
+                <div className="space-y-2">
+                  {val.map((item, itemIndex) => (
+                    <div key={`${inputKey}-${key}-${itemIndex}`} className="flex items-center gap-2">
+                      <Input
+                        value={typeof item === 'object' ? JSON.stringify(item) : String(item)}
+                        onChange={(e) => {
+                          const newArray = [...val];
+                          try {
+                            newArray[itemIndex] = JSON.parse(e.target.value);
+                          } catch {
+                            newArray[itemIndex] = e.target.value;
+                          }
+                          updateInput(inputKey, { ...value, [key]: newArray });
+                        }}
+                        placeholder={`${key} ${itemIndex + 1}`}
+                        className="flex-1 text-xs bg-slate-600/50 border-slate-500 text-white placeholder:text-slate-400 focus:border-violet-500"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const newArray = val.filter((_, i) => i !== itemIndex);
+                          updateInput(inputKey, { ...value, [key]: newArray });
+                        }}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      updateInput(inputKey, { ...value, [key]: [...val, ""] });
+                    }}
+                    className="w-full text-violet-400 hover:text-violet-300 hover:bg-violet-500/20"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Add {key.replace(/_/g, " ")}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* Regular property input */
+              <Input
+                value={typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                onChange={(e) => {
+                  try {
+                    const parsedValue = JSON.parse(e.target.value);
+                    updateInput(inputKey, { ...value, [key]: parsedValue });
+                  } catch {
+                    updateInput(inputKey, { ...value, [key]: e.target.value });
+                  }
+                }}
+                placeholder={`Enter ${key.replace(/_/g, " ")}`}
+                className="text-xs bg-slate-600/50 border-slate-500 text-white placeholder:text-slate-400 focus:border-violet-500"
+              />
+            )}
+          </div>
+        ))}
+        {objectEntries.length === 0 && (
+          <div className="text-xs text-slate-500 italic">No properties defined</div>
+        )}
+      </div>
+    );
+  };
+
+  // Helper function to render arrays
+  const renderArrayField = (inputKey: string, value: any[]) => {
+    return (
+      <div className="space-y-2">
+        {value.map((item, index) => (
+          <div key={`${inputKey}-${index}`} className="flex items-center gap-2">
+            <Input
+              value={typeof item === 'object' ? JSON.stringify(item) : String(item)}
+              onChange={(e) => {
+                const newArray = [...value];
+                try {
+                  newArray[index] = JSON.parse(e.target.value);
+                } catch {
+                  newArray[index] = e.target.value;
+                }
+                updateInput(inputKey, newArray);
+              }}
+              placeholder={`Item ${index + 1}`}
+              className="flex-1 text-xs bg-slate-600/50 border-slate-500 text-white placeholder:text-slate-400 focus:border-violet-500"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const newArray = value.filter((_, i) => i !== index);
+                updateInput(inputKey, newArray);
+              }}
+              className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+            >
+              <Minus className="w-3 h-3" />
+            </Button>
+          </div>
+        ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            updateInput(inputKey, [...value, ""]);
+          }}
+          className="w-full text-violet-400 hover:text-violet-300 hover:bg-violet-500/20"
+        >
+          <Plus className="w-3 h-3 mr-1" />
+          Add Item
+        </Button>
+      </div>
+    );
+  };
+
   const renderInputField = (inputKey: string, inputDef: any) => {
     let value = inputs[inputKey];
     
     // Handle default values
     if (value === undefined || value === null) {
-      value = inputDef.default || "";
+      if (inputDef.type === "array") {
+        value = [];
+      } else if (inputDef.type === "object") {
+        value = {};
+      } else {
+        value = inputDef.default || "";
+      }
+    }
+
+    // Handle array type based on schema definition
+    if (inputDef.type === "array" || Array.isArray(value)) {
+      return (
+        <div className="space-y-2">
+          <Label className="text-xs text-slate-400">Array Items:</Label>
+          {renderArrayField(inputKey, Array.isArray(value) ? value : [])}
+        </div>
+      );
+    }
+
+    // Handle object type based on schema definition
+    if (inputDef.type === "object" || (value && typeof value === 'object' && !Array.isArray(value))) {
+      return (
+        <div className="space-y-2">
+          <Label className="text-xs text-slate-400">Object Properties:</Label>
+          {renderObjectField(inputKey, typeof value === 'object' && value !== null ? value : {})}
+        </div>
+      );
     }
     
     // Ensure value is compatible with the input type
