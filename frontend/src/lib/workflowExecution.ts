@@ -165,6 +165,19 @@ export class WorkflowExecutionService {
       }
     }
     
+    // Handle content_distribution_scheduler outputs
+    if (sourceModule === 'content_distribution_scheduler' && sourceOutput === 'distribution_schedule') {
+      if (targetModule === 'email_sender' && targetInput === 'campaign_description') {
+        // Transform distribution schedule to campaign description for email sender
+        if (Array.isArray(sourceValue) && sourceValue.length > 0) {
+          const scheduleSummary = `Campaign distribution schedule with ${sourceValue.length} scheduled posts`;
+          console.log(`📧 Transformed distribution schedule to campaign description: ${scheduleSummary}`);
+          return scheduleSummary;
+        }
+        return "Email campaign based on content distribution schedule";
+      }
+    }
+    
     // Default: return the value as-is
     console.log(`📋 Using source value as-is for ${targetModule}.${targetInput}`);
     return sourceValue;
@@ -388,6 +401,15 @@ export class WorkflowExecutionService {
           }
         };
         
+      case 'email_sender':
+        return {
+          company_name: inputs.company_name || "Your Company",
+          campaign_description: inputs.campaign_description || "Email campaign",
+          recipients: Array.isArray(inputs.recipients) ? inputs.recipients : [],
+          sender_name: inputs.sender_name || null,
+          email_subject: inputs.email_subject || null
+        };
+        
       default:
         return inputs;
     }
@@ -402,7 +424,10 @@ export class WorkflowExecutionService {
       const transformedInputs = this.transformInputsForAPI(moduleName, inputs);
       console.log(`📝 Transformed inputs for ${moduleName}:`, transformedInputs);
       
-      const response = await fetch(`${API_BASE_URL}/${moduleName}`, {
+      // Special case for email_sender - use email_campaign endpoint
+      const endpoint = moduleName === 'email_sender' ? 'email_campaign' : moduleName;
+      
+      const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -644,6 +669,7 @@ export class WorkflowExecutionService {
       'copy_content_generator',
       'campaign_timeline_optimizer',
       'content_distribution_scheduler',
+      'email_sender',
       // Add more as they become available
     ];
   }
