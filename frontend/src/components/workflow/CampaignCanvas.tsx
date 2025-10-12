@@ -107,7 +107,7 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
   const [showCalendar, setShowCalendar] = React.useState(false);
   const [isExecutingWorkflow, setIsExecutingWorkflow] = React.useState(false);
   const [executionProgress, setExecutionProgress] = React.useState<{completed: number, total: number}>({completed: 0, total: 0});
-  const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview, setExecutionResult, strategyPlan } = useCampaignStore();
+  const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview, setExecutionResult, strategyPlan, setStrategyPlan } = useCampaignStore();
 
   // Update nodes and edges when props change
   useEffect(() => {
@@ -431,7 +431,7 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
       <div className="h-full w-full flex overflow-hidden">
         <div className="flex-1 relative h-full">
           {/* Strategy Panel - AI Agent's Thought Process */}
-          {strategyPlan && <StrategyPanel strategyPlan={strategyPlan} />}
+          {strategyPlan && <StrategyPanel strategyPlan={strategyPlan} onClose={() => setStrategyPlan(null)} />}
           
           <ReactFlow
             nodes={nodes}
