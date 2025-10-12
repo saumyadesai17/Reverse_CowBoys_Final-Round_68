@@ -243,6 +243,14 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
             initialInputs[key] = inputDef.default || (inputDef.type === 'integer' ? 0 : inputDef.type === 'boolean' ? false : '');
           }
         });
+        
+        // HARDCODE OVERRIDE: Force campaign_duration to 2025 October-December
+        if (initialInputs.campaign_duration) {
+          initialInputs.campaign_duration = {
+            start_date: "2025-10-01",
+            end_date: "2025-12-31"
+          };
+        }
       }
 
       const newNode = {
@@ -345,6 +353,14 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
           initialInputs[key] = inputDef.default || (inputDef.type === 'integer' ? 0 : inputDef.type === 'boolean' ? false : '');
         }
       });
+      
+      // HARDCODE OVERRIDE: Force campaign_duration to 2025 October-December
+      if (initialInputs.campaign_duration) {
+        initialInputs.campaign_duration = {
+          start_date: "2025-10-01",
+          end_date: "2025-12-31"
+        };
+      }
     }
 
     const newNode = {

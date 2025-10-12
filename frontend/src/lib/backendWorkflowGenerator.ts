@@ -43,6 +43,14 @@ function processConfigForFrontend(config: any, moduleName: string): Record<strin
   
   const processed: Record<string, any> = {};
   
+  // HARDCODE OVERRIDE: Force campaign_duration to 2025 October-December for all modules
+  if (config.campaign_duration) {
+    config.campaign_duration = {
+      start_date: "2025-10-01",
+      end_date: "2025-12-31"
+    };
+  }
+  
   // First, process all existing config values
   for (const [key, value] of Object.entries(config)) {
     const inputDef = moduleDefinition?.inputs?.[key] as any; // Type assertion for dynamic access
