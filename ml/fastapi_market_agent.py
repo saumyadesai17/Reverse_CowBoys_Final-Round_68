@@ -537,6 +537,296 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def generate_key_dates_from_brief(campaign_brief: str) -> List[KeyDate]:
+    """Generate key dates based on campaign brief and current month"""
+    from datetime import datetime, timedelta
+    
+    brief_lower = campaign_brief.lower()
+    current_date = datetime.now()
+    current_month = current_date.month
+    current_year = current_date.year
+    
+    key_dates = []
+    
+    # Generate dates based on campaign context
+    if "launch" in brief_lower or "new" in brief_lower:
+        # Product launch campaign
+        launch_date = current_date + timedelta(days=7)
+        key_dates.append(KeyDate(
+            date=launch_date.strftime("%Y-%m-%d"),
+            event="Product Launch",
+            priority=["high"]
+        ))
+        
+        # Pre-launch phase
+        pre_launch = current_date + timedelta(days=3)
+        key_dates.append(KeyDate(
+            date=pre_launch.strftime("%Y-%m-%d"),
+            event="Pre-Launch Campaign",
+            priority=["medium"]
+        ))
+        
+        # Post-launch follow-up
+        follow_up = launch_date + timedelta(days=7)
+        key_dates.append(KeyDate(
+            date=follow_up.strftime("%Y-%m-%d"),
+            event="Post-Launch Follow-up",
+            priority=["medium"]
+        ))
+    
+    elif "holiday" in brief_lower or "christmas" in brief_lower or "new year" in brief_lower:
+        # Holiday campaign
+        if current_month == 12:
+            key_dates.append(KeyDate(
+                date=f"{current_year}-12-25",
+                event="Christmas Day",
+                priority=["high"]
+            ))
+            key_dates.append(KeyDate(
+                date=f"{current_year}-12-24",
+                event="Christmas Eve",
+                priority=["high"]
+            ))
+        elif current_month == 1:
+            key_dates.append(KeyDate(
+                date=f"{current_year}-01-01",
+                event="New Year's Day",
+                priority=["high"]
+            ))
+            key_dates.append(KeyDate(
+                date=f"{current_year}-01-31",
+                event="January Campaign End",
+                priority=["medium"]
+            ))
+    
+    elif "environment" in brief_lower or "earth day" in brief_lower or "sustainability" in brief_lower:
+        # Environmental campaign
+        if current_month == 4:
+            key_dates.append(KeyDate(
+                date=f"{current_year}-04-22",
+                event="Earth Day",
+                priority=["high"]
+            ))
+        else:
+            # General environmental awareness
+            env_date = current_date + timedelta(days=14)
+            key_dates.append(KeyDate(
+                date=env_date.strftime("%Y-%m-%d"),
+                event="Environmental Awareness Day",
+                priority=["high"]
+            ))
+    
+    elif "fitness" in brief_lower or "health" in brief_lower or "wellness" in brief_lower:
+        # Health/fitness campaign
+        # New Year resolution period
+        if current_month == 1:
+            key_dates.append(KeyDate(
+                date=f"{current_year}-01-01",
+                event="New Year Fitness Resolution",
+                priority=["high"]
+            ))
+            key_dates.append(KeyDate(
+                date=f"{current_year}-01-15",
+                event="Mid-January Check-in",
+                priority=["medium"]
+            ))
+        else:
+            # General fitness campaign
+            fitness_date = current_date + timedelta(days=10)
+            key_dates.append(KeyDate(
+                date=fitness_date.strftime("%Y-%m-%d"),
+                event="Fitness Challenge Launch",
+                priority=["high"]
+            ))
+    
+    elif "sale" in brief_lower or "discount" in brief_lower or "promotion" in brief_lower:
+        # Sales campaign
+        sale_start = current_date + timedelta(days=5)
+        sale_end = sale_start + timedelta(days=7)
+        
+        key_dates.append(KeyDate(
+            date=sale_start.strftime("%Y-%m-%d"),
+            event="Sale Launch",
+            priority=["high"]
+        ))
+        key_dates.append(KeyDate(
+            date=sale_end.strftime("%Y-%m-%d"),
+            event="Sale End",
+            priority=["high"]
+        ))
+        
+        # Mid-sale reminder
+        mid_sale = sale_start + timedelta(days=3)
+        key_dates.append(KeyDate(
+            date=mid_sale.strftime("%Y-%m-%d"),
+            event="Mid-Sale Reminder",
+            priority=["medium"]
+        ))
+    
+    else:
+        # Default campaign timeline
+        week1 = current_date + timedelta(days=7)
+        week2 = current_date + timedelta(days=14)
+        week3 = current_date + timedelta(days=21)
+        week4 = current_date + timedelta(days=28)
+        
+        key_dates.extend([
+            KeyDate(
+                date=week1.strftime("%Y-%m-%d"),
+                event="Week 1 Campaign Review",
+                priority=["medium"]
+            ),
+            KeyDate(
+                date=week2.strftime("%Y-%m-%d"),
+                event="Mid-Campaign Assessment",
+                priority=["medium"]
+            ),
+            KeyDate(
+                date=week3.strftime("%Y-%m-%d"),
+                event="Campaign Optimization",
+                priority=["medium"]
+            ),
+            KeyDate(
+                date=week4.strftime("%Y-%m-%d"),
+                event="Campaign Conclusion",
+                priority=["high"]
+            )
+        ])
+    
+    return key_dates
+
+def generate_budget_constraints_from_brief(campaign_brief: str) -> Dict[str, Any]:
+    """Generate budget constraints based on campaign brief"""
+    brief_lower = campaign_brief.lower()
+    
+    # Default budget structure
+    budget_constraints = {
+        "daily_budget": 100,
+        "total_budget": 3000,
+        "platform_allocation": {
+            "Instagram": 40,
+            "Facebook": 30,
+            "LinkedIn": 20,
+            "Twitter": 10
+        },
+        "content_type_allocation": {
+            "visual_content": 50,
+            "video_content": 30,
+            "text_content": 20
+        }
+    }
+    
+    # Adjust budget based on campaign context
+    if "high budget" in brief_lower or "premium" in brief_lower or "enterprise" in brief_lower:
+        budget_constraints.update({
+            "daily_budget": 500,
+            "total_budget": 15000,
+            "platform_allocation": {
+                "Instagram": 35,
+                "Facebook": 25,
+                "LinkedIn": 25,
+                "TikTok": 15
+            },
+            "content_type_allocation": {
+                "visual_content": 40,
+                "video_content": 45,
+                "text_content": 15
+            }
+        })
+    
+    elif "low budget" in brief_lower or "startup" in brief_lower or "small" in brief_lower:
+        budget_constraints.update({
+            "daily_budget": 25,
+            "total_budget": 750,
+            "platform_allocation": {
+                "Instagram": 50,
+                "Facebook": 30,
+                "LinkedIn": 20
+            },
+            "content_type_allocation": {
+                "visual_content": 60,
+                "video_content": 20,
+                "text_content": 20
+            }
+        })
+    
+    elif "medium budget" in brief_lower or "moderate" in brief_lower:
+        budget_constraints.update({
+            "daily_budget": 200,
+            "total_budget": 6000,
+            "platform_allocation": {
+                "Instagram": 40,
+                "Facebook": 30,
+                "LinkedIn": 20,
+                "Twitter": 10
+            },
+            "content_type_allocation": {
+                "visual_content": 50,
+                "video_content": 30,
+                "text_content": 20
+            }
+        })
+    
+    # Adjust based on industry/context
+    if "tech" in brief_lower or "software" in brief_lower or "app" in brief_lower:
+        budget_constraints["platform_allocation"].update({
+            "LinkedIn": 30,
+            "Twitter": 20,
+            "Instagram": 30,
+            "Facebook": 20
+        })
+    
+    elif "fashion" in brief_lower or "lifestyle" in brief_lower or "beauty" in brief_lower:
+        budget_constraints["platform_allocation"].update({
+            "Instagram": 50,
+            "TikTok": 25,
+            "Facebook": 15,
+            "LinkedIn": 10
+        })
+        budget_constraints["content_type_allocation"].update({
+            "visual_content": 70,
+            "video_content": 25,
+            "text_content": 5
+        })
+    
+    elif "b2b" in brief_lower or "business" in brief_lower or "professional" in brief_lower:
+        budget_constraints["platform_allocation"].update({
+            "LinkedIn": 50,
+            "Facebook": 25,
+            "Twitter": 15,
+            "Instagram": 10
+        })
+        budget_constraints["content_type_allocation"].update({
+            "text_content": 40,
+            "visual_content": 40,
+            "video_content": 20
+        })
+    
+    elif "food" in brief_lower or "restaurant" in brief_lower or "coffee" in brief_lower:
+        budget_constraints["platform_allocation"].update({
+            "Instagram": 45,
+            "Facebook": 30,
+            "TikTok": 15,
+            "LinkedIn": 10
+        })
+        budget_constraints["content_type_allocation"].update({
+            "visual_content": 60,
+            "video_content": 30,
+            "text_content": 10
+        })
+    
+    # Add campaign-specific constraints
+    if "30 days" in brief_lower or "month" in brief_lower:
+        budget_constraints["campaign_duration"] = "30 days"
+    elif "week" in brief_lower:
+        budget_constraints["campaign_duration"] = "7 days"
+        budget_constraints["total_budget"] = budget_constraints["daily_budget"] * 7
+    elif "quarter" in brief_lower or "3 months" in brief_lower:
+        budget_constraints["campaign_duration"] = "90 days"
+        budget_constraints["total_budget"] = budget_constraints["daily_budget"] * 90
+    
+    return budget_constraints
+
 def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigurations:
     """Fallback module configuration extraction without external APIs"""
     
@@ -652,8 +942,8 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
             min_posts_per_day=1,
             max_posts_per_day=3
         ),
-        key_dates=[],
-        budget_constraints={}
+        key_dates=generate_key_dates_from_brief(campaign_brief),
+        budget_constraints=generate_budget_constraints_from_brief(campaign_brief)
     )
     
     content_distribution_scheduler = ContentDistributionScheduler(
