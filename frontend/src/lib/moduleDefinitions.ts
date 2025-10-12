@@ -910,6 +910,78 @@ export const MODULE_DEFINITIONS = {
       },
       execution_status: "enum"
     }
+  },
+
+  email_sender: {
+    module_name: "email_sender",
+    display_name: "Email Sender",
+    description: "Send personalized email campaigns using AI-generated content",
+    category: "Communication",
+    color: "#8b5cf6",
+    inputs: {
+      company_name: {
+        type: "string",
+        required: true,
+        description: "Company name for email campaigns"
+      },
+      campaign_description: {
+        type: "string",
+        required: true,
+        description: "Campaign description for AI personalization"
+      },
+      recipients: {
+        type: "array",
+        required: true,
+        items: {
+          name: "string",
+          email: "string",
+          personal_description: "string"
+        },
+        description: "List of email recipients with personalization data"
+      },
+      sender_name: {
+        type: "string",
+        required: false,
+        description: "Sender name (defaults to company name)"
+      },
+      email_subject: {
+        type: "string",
+        required: false,
+        description: "Email subject (defaults to 'Special Offer from {company_name}!')"
+      }
+    },
+    outputs: {
+      campaign_summary: {
+        type: "object",
+        properties: {
+          company_name: "string",
+          campaign_description: "string",
+          total_recipients: "integer",
+          successful_sends: "integer",
+          failed_sends: "integer",
+          success_rate: "float",
+          sender_name: "string",
+          sender_email: "string"
+        }
+      },
+      delivery_results: {
+        type: "array",
+        items: {
+          recipient_name: "string",
+          recipient_email: "string",
+          status: "enum",
+          error_message: "string",
+          email_content: "string"
+        }
+      },
+      execution_status: {
+        type: "enum",
+        values: ["success", "partial_success", "failed"]
+      },
+      timestamp: {
+        type: "datetime"
+      }
+    }
   }
 };
 
@@ -920,13 +992,14 @@ export const CONNECTION_MATRIX = {
   "visual_asset_generator.generated_images": ["video_content_generator.image_inputs", "content_distribution_scheduler.generated_images"],
   "video_content_generator.video_url": ["content_distribution_scheduler.video_url"],
   "campaign_timeline_optimizer.optimized_timeline": ["content_distribution_scheduler.optimized_timeline"],
-  "content_distribution_scheduler.distribution_schedule": ["content_distribution_executor.distribution_schedule"],
+  "content_distribution_scheduler.distribution_schedule": ["content_distribution_executor.distribution_schedule", "email_sender.campaign_description"],
   "lead_discovery_engine.discovered_leads": ["outreach_call_scheduler.discovered_leads", "collaboration_outreach_composer.discovered_leads"],
   "outreach_call_scheduler.call_schedule": ["voice_interaction_agent.call_schedule"],
   "voice_interaction_agent.call_results": ["external_api_orchestrator.request_body"],
   "voice_interaction_agent.extracted_intelligence": ["external_api_orchestrator.request_body"],
   "content_distribution_executor.executed_posts": ["external_api_orchestrator.request_body"],
   "collaboration_outreach_composer.outreach_messages": ["content_distribution_executor.distribution_schedule"],
+  "email_sender.campaign_results": ["external_api_orchestrator.request_body"],
   "external_api_orchestrator.parsed_data": ["*"] // Universal connector
 };
 
@@ -936,5 +1009,6 @@ export const MODULE_CATEGORIES = {
   "Strategy": ["campaign_timeline_optimizer"],
   "Scheduling": ["content_distribution_scheduler", "outreach_call_scheduler"],
   "Execution": ["content_distribution_executor", "voice_interaction_agent"],
+  "Communication": ["email_sender"],
   "Integration": ["external_api_orchestrator"]
 };

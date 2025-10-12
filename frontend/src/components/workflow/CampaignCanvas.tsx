@@ -19,6 +19,7 @@ import "@xyflow/react/dist/style.css";
 import { GenericModuleNode } from "./nodes/GenericModuleNode";
 import { OutputNode } from "./nodes/OutputNode";
 import { InputNode } from "./nodes/InputNode";
+import { EmailSenderNode } from "./nodes/EmailSenderNode";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { Sidebar } from "./Sidebar";
 import { CampaignCalendar } from "./CampaignCalendar";
@@ -79,6 +80,7 @@ const nodeTypes = {
   module: GenericModuleNode,
   output: OutputNode,
   input: InputNode,
+  email_sender: EmailSenderNode,
 };
 
 interface CampaignCanvasProps {
@@ -256,7 +258,7 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
 
       const newNode = {
         id: `${dropData.module_name}-${Date.now()}`,
-        type: 'module',
+        type: dropData.module_name === 'email_sender' ? 'email_sender' : 'module',
         position,
         data: {
           id: `${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
@@ -366,7 +368,7 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
 
     const newNode = {
       id: `${moduleId}-${Date.now()}`,
-      type: 'module' as const,
+      type: moduleId === 'email_sender' ? 'email_sender' : 'module' as const,
       position,
       data: {
         id: `${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
