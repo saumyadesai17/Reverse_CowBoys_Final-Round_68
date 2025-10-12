@@ -737,7 +737,7 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
     performance_analytics = PerformanceAnalyticsAgent(
         metrics=["Reach", "Engagement", "Clicks", "Conversions"],
         platforms=["Instagram", "Facebook", "LinkedIn"],
-        date_range=DateRange(start_date="2024-01-01", end_date="2024-01-31"),
+        date_range=DateRange(start_date="2025-10-12", end_date="2025-12-31"),
         data_sources=["Social media platforms", "Analytics tools"],
         aggregation_level="Daily",
         compare_with_previous_period=True
@@ -746,7 +746,7 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
     sentiment_analysis = SentimentAnalysisAgent(
         language="English",
         platform="Social media",
-        date_range=DateRange(start_date="2024-01-01", end_date="2024-01-31"),
+        date_range=DateRange(start_date="2025-10-12", end_date="2025-12-31"),
         sentiment_categories=["Positive", "Negative", "Neutral"],
         include_neutral=True,
         keywords_to_track=["brand", "product", "service"]

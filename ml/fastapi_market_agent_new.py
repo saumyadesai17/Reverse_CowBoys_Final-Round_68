@@ -593,8 +593,8 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
     
     campaign_timeline_optimizer = CampaignTimelineOptimizer(
         campaign_duration=CampaignDuration(
-            start_date="2024-01-01",
-            end_date="2024-01-31"
+            start_date="2025-10-12",
+            end_date="2025-12-31"
         ),
         content_inventory=[],
         audience_segments=["primary", "secondary"],
@@ -643,8 +643,8 @@ def extract_module_configurations_fallback(campaign_brief: str) -> ModuleConfigu
             avoid_dates=[]
         ),
         campaign_duration=CampaignDuration(
-            start_date="2024-01-01",
-            end_date="2024-01-31"
+            start_date="2025-10-12",
+            end_date="2025-12-31"
         ),
         calls_per_day=5,
         prioritization_criteria=PrioritizationCriteria(

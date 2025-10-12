@@ -482,8 +482,8 @@ if __name__ == "__main__":
     # Test request
     test_request = CampaignTimelineRequest(
         campaign_duration=CampaignDuration(
-            start_date="2024-01-01",
-            end_date="2024-01-31"
+            start_date="2025-10-01",
+            end_date="2025-12-31"
         ),
         content_inventory=[
             ContentInventory(
@@ -508,7 +508,7 @@ if __name__ == "__main__":
         ),
         key_dates=[
             KeyDate(
-                date="2024-01-15",
+                date="2025-10-15",
                 event="Product Launch",
                 priority=["high"]
             )

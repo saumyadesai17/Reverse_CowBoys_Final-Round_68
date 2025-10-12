@@ -659,11 +659,11 @@ if __name__ == "__main__":
         call_window_preferences=CallWindowPreferences(
             timezone="PST",
             preferred_hours=["10:00", "14:00", "16:00"],
-            avoid_dates=["2024-01-20", "2024-01-25"]
+            avoid_dates=["2025-01-20", "2025-01-25"]
         ),
         campaign_duration=CampaignDuration(
-            start_date="2024-01-15",
-            end_date="2024-01-30"
+            start_date="2025-10-15",
+            end_date="2025-12-31"
         ),
         calls_per_day=3,
         prioritization_criteria=PrioritizationCriteria(

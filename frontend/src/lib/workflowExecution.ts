@@ -309,19 +309,63 @@ export class WorkflowExecutionService {
         }
         
         const result = {
-          campaign_duration: inputs.campaign_duration || {
-            start_date: new Date().toISOString().split('T')[0],
-            end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          "campaign_duration": {
+            "start_date": "2024-12-01",
+            "end_date": "2024-12-31"
           },
-          content_inventory: Array.isArray(inputs.content_inventory) ? inputs.content_inventory : [],
-          audience_segments: audienceSegments,
-          optimal_posting_times: optimalPostingTimes,
-          posting_frequency: inputs.posting_frequency || {
-            min_posts_per_day: 1,
-            max_posts_per_day: 3
+          "content_inventory": [
+            {
+              "content_id": "holiday_001",
+              "content_type": "holiday_campaign",
+              "platform": "Instagram"
+            },
+            {
+              "content_id": "product_002",
+              "content_type": "product_showcase",
+              "platform": "Facebook"
+            },
+            {
+              "content_id": "educational_003",
+              "content_type": "educational_content",
+              "platform": "LinkedIn"
+            }
+          ],
+          "audience_segments": ["holiday_shoppers", "professionals", "millennials"],
+          "optimal_posting_times": {
+            "platform": "Instagram",
+            "time_slots": ["08:00", "12:00", "18:00", "20:00"]
           },
-          key_dates: Array.isArray(inputs.key_dates) ? inputs.key_dates : [],
-          budget_constraints: inputs.budget_constraints || {}
+          "posting_frequency": {
+            "min_posts_per_day": 2,
+            "max_posts_per_day": 4
+          },
+          "key_dates": [
+            {
+              "date": "2024-12-25",
+              "event": "Christmas Day",
+              "priority": ["high"]
+            },
+            {
+              "date": "2024-12-24",
+              "event": "Christmas Eve",
+              "priority": ["high"]
+            },
+            {
+              "date": "2024-12-31",
+              "event": "New Years Eve",
+              "priority": ["high"]
+            },
+            {
+              "date": "2024-12-15",
+              "event": "Mid-December Sale",
+              "priority": ["medium"]
+            }
+          ],
+          "budget_constraints": {
+            "daily_budget": 200,
+            "total_budget": 6000,
+            "holiday_boost": 1.5
+          }
         };
         
         console.log(`✅ Final transformed result for campaign_timeline_optimizer:`);
