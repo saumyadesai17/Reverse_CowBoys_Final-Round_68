@@ -27,6 +27,53 @@ import { Eye, EyeOff, Play, Square } from "lucide-react";
 import { WorkflowExecutionService } from "@/lib/workflowExecution";
 import { getStoredCampaignResponse } from "@/lib/backendWorkflowGenerator";
 
+// Helper function to convert ReactFlow edges to workflow connections format
+const convertEdgesToConnections = (nodes: Node[], edges: Edge[]) => {
+  const connectionsBySource: Record<string, Array<{target_module: string, source_output: string, target_input: string}>> = {};
+  
+  console.log('🔄 Converting edges to connections...');
+  console.log('📋 Available edges:', edges);
+  
+  edges.forEach(edge => {
+    const sourceNode = nodes.find(n => n.id === edge.source);
+    const targetNode = nodes.find(n => n.id === edge.target);
+    
+    if (sourceNode && targetNode) {
+      const sourceModuleName = sourceNode.data.module_name as string;
+      const targetModuleName = targetNode.data.module_name as string;
+      
+      // Extract output and input names from handles (these should be the actual field names)
+      const sourceOutput = edge.sourceHandle || 'output';
+      const targetInput = edge.targetHandle || 'input';
+      
+      if (!connectionsBySource[sourceModuleName]) {
+        connectionsBySource[sourceModuleName] = [];
+      }
+      
+      connectionsBySource[sourceModuleName].push({
+        target_module: targetModuleName,
+        source_output: sourceOutput,
+        target_input: targetInput
+      });
+      
+      console.log(`🔗 Edge connection: ${sourceModuleName}.${sourceOutput} → ${targetModuleName}.${targetInput}`);
+      console.log(`   Source node: ${sourceNode.id} (${sourceModuleName})`);
+      console.log(`   Target node: ${targetNode.id} (${targetModuleName})`);
+    } else {
+      console.warn('⚠️ Could not find source or target node for edge:', edge);
+    }
+  });
+  
+  // Convert to the format expected by workflow execution
+  const result = Object.entries(connectionsBySource).map(([module_name, connections]) => ({
+    module_name,
+    connections
+  }));
+  
+  console.log('🎯 Final connections structure:', result);
+  return result;
+};
+
 const nodeTypes = {
   module: GenericModuleNode,
   output: OutputNode,
@@ -288,9 +335,9 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
     setExecutionProgress({ completed: 0, total: nodes.length });
 
     try {
-      // Get module connections from stored campaign response
-      const campaignResponse = getStoredCampaignResponse();
-      const connections = campaignResponse?.module_connections || [];
+      // Convert ReactFlow edges to workflow connections format
+      const connections = convertEdgesToConnections(nodes, edges);
+      console.log('🔗 Converted connections:', connections);
 
       // Execute workflow
       const results = await WorkflowExecutionService.executeWorkflow(
