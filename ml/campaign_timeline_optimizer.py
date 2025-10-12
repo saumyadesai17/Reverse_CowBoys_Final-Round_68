@@ -211,6 +211,19 @@ def create_timeline_optimizer_agent() -> Agent:
             '  }',
             '}',
             
+            "CRITICAL DISTRIBUTION REQUIREMENTS:",
+            "- Create CONSERVATIVE timeline with max 2-3 posts per week (unless user explicitly sets higher)",
+            "- DISTRIBUTE slots strategically across the ENTIRE campaign duration",
+            "- DO NOT create consecutive daily slots unless specifically required",
+            "- Space out content strategically across weeks and days (3-5 day gaps)",
+            "- Focus on QUALITY over QUANTITY - strategic, high-impact posts",
+            "- Use conservative posting frequency: max 3 posts per week by default",
+            "- Only allow higher frequency if user explicitly sets min_posts_per_day >= 1",
+            "- Create realistic gaps between posts (at least 3-5 days apart)",
+            "- Prioritize key dates but don't cluster all content around them",
+            "- Balance content types and platforms throughout the timeline",
+            "- Calculate total slots conservatively: max 2-3 posts per week unless explicitly overridden",
+            
             "REQUIREMENTS:",
             "- Each timeline_slot_id should be unique (use format: slot_001, slot_002, etc.)",
             "- scheduled_date must be within the campaign duration",
@@ -294,7 +307,19 @@ def optimize_campaign_timeline(request: CampaignTimelineRequest) -> CampaignTime
         9. Consider platform-specific best practices
         10. Account for real-time events and market conditions
         
-        Create an optimized timeline that strategically distributes content across the campaign duration.
+        CRITICAL DISTRIBUTION STRATEGY:
+        - Create a CONSERVATIVE timeline with max 2-3 posts per week (unless user explicitly sets higher)
+        - DISTRIBUTE content strategically across the campaign duration (Dec 1-31)
+        - Space out posts with 3-5 day gaps between posts for better engagement
+        - Focus on QUALITY over QUANTITY - strategic, high-impact posts
+        - Use conservative posting frequency: max 3 posts per week by default
+        - Only allow higher frequency if user explicitly sets min_posts_per_day >= 1
+        - Create realistic timeline with proper spacing for audience engagement
+        - Balance all content types and platforms throughout the month
+        - Prioritize key dates (Christmas Eve, Christmas Day, New Year's Eve, Mid-December Sale) but don't cluster everything around them
+        - Calculate total slots conservatively: max 2-3 posts per week unless explicitly overridden
+        
+        Create an optimized timeline that strategically distributes content across the entire campaign duration with proper spacing.
         """
         
         # Run timeline optimization
@@ -430,47 +455,108 @@ def determine_content_priority(slot: Dict[str, Any], request: CampaignTimelineRe
         return "standard"
 
 def create_fallback_timeline(request: CampaignTimelineRequest, upcoming_events: Dict[str, Any], audience_patterns: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a fallback timeline when LLM optimization fails"""
+    """Create a fallback timeline when LLM optimization fails - properly distributed across campaign duration"""
     
     start_date = datetime.strptime(request.campaign_duration.start_date, "%Y-%m-%d")
     end_date = datetime.strptime(request.campaign_duration.end_date, "%Y-%m-%d")
     
-    timeline_slots = []
-    slot_id = 1
+    # Calculate total campaign days
+    total_days = (end_date - start_date).days + 1
     
-    current_date = start_date
-    while current_date <= end_date:
-        # Create slots for each day based on posting frequency
-        posts_per_day = request.posting_frequency.min_posts_per_day
+    # Calculate realistic number of slots based on user's posting frequency
+    # Use a more conservative approach: max 2-3 posts per week unless explicitly set higher
+    weeks_in_campaign = total_days / 7
+    
+    # Calculate average posts per week based on user's min/max settings
+    min_posts_per_day = request.posting_frequency.min_posts_per_day
+    max_posts_per_day = request.posting_frequency.max_posts_per_day
+    avg_posts_per_day = (min_posts_per_day + max_posts_per_day) / 2
+    
+    # Convert to weekly frequency
+    posts_per_week = avg_posts_per_day * 7
+    
+    # Apply conservative limits: max 3 posts per week unless user explicitly sets higher
+    # Only allow higher frequency if user explicitly sets min_posts_per_day >= 1
+    if min_posts_per_day >= 1:
+        # User explicitly set daily posting, respect their settings but cap at 5/week
+        posts_per_week = min(posts_per_week, 5)
+    else:
+        # Conservative default: max 3 posts per week
+        posts_per_week = min(posts_per_week, 3)
+    
+    total_slots_needed = int(weeks_in_campaign * posts_per_week)
+    
+    # Ensure minimum slots for key dates and maximum reasonable slots
+    min_slots = len(request.key_dates) + 2  # At least key dates + 2 extra
+    max_slots = min(20, total_days)  # Maximum 20 slots or total campaign days
+    
+    total_slots_needed = max(min_slots, min(total_slots_needed, max_slots))
+    
+    timeline_slots = []
+    
+    # Create key dates mapping for priority assignment
+    key_dates_map = {}
+    for key_date in request.key_dates:
+        key_dates_map[key_date.date] = key_date.priority
+    
+    # Distribute slots evenly across the campaign duration
+    for slot_id in range(1, total_slots_needed + 1):
+        # Calculate which day this slot should be on (distributed evenly)
+        day_offset = int((slot_id - 1) * total_days / total_slots_needed)
+        scheduled_date = start_date + timedelta(days=day_offset)
         
-        for post_num in range(posts_per_day):
-            if slot_id <= len(request.content_inventory) * 2:  # Limit slots
-                content_item = request.content_inventory[slot_id % len(request.content_inventory)]
-                audience_segment = request.audience_segments[slot_id % len(request.audience_segments)]
-                
-                slot = {
-                    "timeline_slot_id": f"slot_{slot_id:03d}",
-                    "scheduled_date": current_date.strftime("%Y-%m-%d"),
-                    "content_type": content_item.content_type,
-                    "platform": content_item.platform,
-                    "target_segment": audience_segment,
-                    "priority": ["medium"],
-                    "optimal_time": request.optimal_posting_times.time_slots[post_num % len(request.optimal_posting_times.time_slots)],
-                    "reasoning": f"Scheduled for {audience_segment} audience during optimal engagement time"
-                }
-                timeline_slots.append(slot)
-                slot_id += 1
+        # Ensure we don't go beyond end date
+        if scheduled_date > end_date:
+            scheduled_date = end_date
         
-        current_date += timedelta(days=1)
+        # Select content and audience (cycling through available options)
+        content_item = request.content_inventory[slot_id % len(request.content_inventory)]
+        audience_segment = request.audience_segments[slot_id % len(request.audience_segments)]
+        
+        # Determine priority based on key dates
+        date_str = scheduled_date.strftime("%Y-%m-%d")
+        priority = key_dates_map.get(date_str, ["medium"])
+        
+        # Add some variation to posting times
+        time_slot_index = slot_id % len(request.optimal_posting_times.time_slots)
+        optimal_time = request.optimal_posting_times.time_slots[time_slot_index]
+        
+        slot = {
+            "timeline_slot_id": f"slot_{slot_id:03d}",
+            "scheduled_date": date_str,
+            "content_type": content_item.content_type,
+            "platform": content_item.platform,
+            "target_segment": audience_segment,
+            "priority": priority,
+            "optimal_time": optimal_time,
+            "reasoning": f"Distributed slot {slot_id} for {audience_segment} audience on {date_str} during optimal engagement time"
+        }
+        timeline_slots.append(slot)
+    
+    # Sort slots by date for better organization
+    timeline_slots.sort(key=lambda x: x["scheduled_date"])
+    
+    # Calculate insights
+    high_priority_slots = len([s for s in timeline_slots if "high" in s.get("priority", [])])
+    
+    platform_distribution = {}
+    audience_coverage = {}
+    
+    for slot in timeline_slots:
+        platform = slot.get("platform", "unknown")
+        segment = slot.get("target_segment", "unknown")
+        
+        platform_distribution[platform] = platform_distribution.get(platform, 0) + 1
+        audience_coverage[segment] = audience_coverage.get(segment, 0) + 1
     
     return {
         "optimized_timeline": timeline_slots,
         "timeline_insights": {
             "total_slots": len(timeline_slots),
-            "high_priority_slots": 0,
-            "platform_distribution": {},
-            "audience_coverage": {},
-            "engagement_prediction": "Moderate engagement expected"
+            "high_priority_slots": high_priority_slots,
+            "platform_distribution": platform_distribution,
+            "audience_coverage": audience_coverage,
+            "engagement_prediction": "Well-distributed timeline with strategic spacing"
         }
     }
 
