@@ -206,44 +206,132 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
     );
   };
 
-  // Helper function to render arrays
-  const renderArrayField = (inputKey: string, value: any[]) => {
+  // Helper function to render arrays with proper schema support
+  const renderArrayField = (inputKey: string, value: any[], inputDef?: any) => {
+    const itemsSchema = inputDef?.items;
+    
     return (
       <div className="space-y-2">
         {value.map((item, index) => (
-          <div key={`${inputKey}-${index}`} className="flex items-center gap-2">
-            <Input
-              value={typeof item === 'object' ? JSON.stringify(item) : String(item)}
-              onChange={(e) => {
-                const newArray = [...value];
-                try {
-                  newArray[index] = JSON.parse(e.target.value);
-                } catch {
-                  newArray[index] = e.target.value;
-                }
-                updateInput(inputKey, newArray);
-              }}
-              placeholder={`Item ${index + 1}`}
-              className="flex-1 text-xs bg-slate-600/50 border-slate-500 text-white placeholder:text-slate-400 focus:border-violet-500"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                const newArray = value.filter((_, i) => i !== index);
-                updateInput(inputKey, newArray);
-              }}
-              className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-            >
-              <Minus className="w-3 h-3" />
-            </Button>
+          <div key={`${inputKey}-${index}`} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-slate-300">Item {index + 1}:</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const newArray = value.filter((_, i) => i !== index);
+                  updateInput(inputKey, newArray);
+                }}
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/20 h-6 w-6 p-0"
+              >
+                <Minus className="w-3 h-3" />
+              </Button>
+            </div>
+            
+            {/* Render based on items schema type */}
+            {typeof itemsSchema === 'object' && itemsSchema !== null ? (
+              // Array contains objects - render object fields
+              <div className="ml-4 p-3 border border-slate-600 rounded bg-slate-700/30">
+                {Object.entries(itemsSchema).map(([propKey, propType]) => {
+                  // Ensure the item exists and has the property initialized
+                  if (typeof item !== 'object' || item === null) {
+                    // Fix malformed array item
+                    const newArray = [...value];
+                    newArray[index] = {};
+                    Object.keys(itemsSchema).forEach(key => {
+                      newArray[index][key] = "";
+                    });
+                    updateInput(inputKey, newArray);
+                    return null;
+                  }
+                  
+                  return (
+                  <div key={`${inputKey}-${index}-${propKey}`} className="mb-2 last:mb-0">
+                    <Label className="text-xs text-slate-400 capitalize">
+                      {propKey.replace(/_/g, " ")}:
+                    </Label>
+                    
+                    {propType === "date" ? (
+                      <Input
+                        type="date"
+                        value={String(item?.[propKey] || "")}
+                        onChange={(e) => {
+                          const newArray = [...value];
+                          newArray[index] = { ...newArray[index], [propKey]: e.target.value };
+                          updateInput(inputKey, newArray);
+                        }}
+                        className="text-xs bg-slate-600/50 border-slate-500 text-white focus:border-violet-500"
+                      />
+                    ) : propType === "enum" ? (
+                      <Select 
+                        value={String(item?.[propKey] || "")} 
+                        onValueChange={(newValue) => {
+                          const newArray = [...value];
+                          newArray[index] = { ...newArray[index], [propKey]: newValue };
+                          updateInput(inputKey, newArray);
+                        }}
+                      >
+                        <SelectTrigger className="text-xs bg-slate-600/50 border-slate-500 text-white">
+                          <SelectValue placeholder={`Select ${propKey}`} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-700 border-slate-600">
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        value={String(item?.[propKey] || "")}
+                        onChange={(e) => {
+                          const newArray = [...value];
+                          newArray[index] = { ...newArray[index], [propKey]: e.target.value };
+                          updateInput(inputKey, newArray);
+                        }}
+                        placeholder={`Enter ${propKey.replace(/_/g, " ")}`}
+                        className="text-xs bg-slate-600/50 border-slate-500 text-white placeholder:text-slate-400 focus:border-violet-500"
+                      />
+                    )}
+                  </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // Array contains primitive values
+              <Input
+                value={typeof item === 'object' ? JSON.stringify(item) : String(item)}
+                onChange={(e) => {
+                  const newArray = [...value];
+                  try {
+                    newArray[index] = JSON.parse(e.target.value);
+                  } catch {
+                    newArray[index] = e.target.value;
+                  }
+                  updateInput(inputKey, newArray);
+                }}
+                placeholder={`Item ${index + 1}`}
+                className="flex-1 text-xs bg-slate-600/50 border-slate-500 text-white placeholder:text-slate-400 focus:border-violet-500"
+              />
+            )}
           </div>
         ))}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => {
-            updateInput(inputKey, [...value, ""]);
+            // Create new item based on schema
+            let newItem: any;
+            if (typeof itemsSchema === 'object' && itemsSchema !== null) {
+              // Create object with empty properties
+              newItem = {};
+              Object.keys(itemsSchema).forEach(key => {
+                newItem[key] = "";
+              });
+            } else {
+              newItem = "";
+            }
+            updateInput(inputKey, [...value, newItem]);
           }}
           className="w-full text-violet-400 hover:text-violet-300 hover:bg-violet-500/20"
         >
@@ -273,7 +361,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
       return (
         <div className="space-y-2">
           <Label className="text-xs text-slate-400">Array Items:</Label>
-          {renderArrayField(inputKey, Array.isArray(value) ? value : [])}
+          {renderArrayField(inputKey, Array.isArray(value) ? value : [], inputDef)}
         </div>
       );
     }
