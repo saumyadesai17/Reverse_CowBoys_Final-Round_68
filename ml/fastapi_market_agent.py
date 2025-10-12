@@ -3,7 +3,7 @@ FastAPI Market Analysis Agent
 Dynamic API for social media campaign planning with real-time research
 
 Install dependencies:
-pip install fastapi uvicorn openai exa-py agno firecrawl python-dotenv pydantic
+pip install fastapi uvicorn openai exa-py agno firecrawl python-dotenv pydantic groq python-multipart
 """
 
 from datetime import datetime, timedelta
@@ -15,9 +15,14 @@ import json
 import re
 import time
 import hashlib
+import csv
+import smtplib
+import io
 from contextlib import asynccontextmanager
+from email.mime.text import MIMEText
+from groq import Groq
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from agno.agent import Agent
@@ -1241,6 +1246,192 @@ async def get_module_connections_endpoint():
         "module_connections": connections,
         "description": "Predefined workflow connections between content generation modules"
     }
+
+# Email Campaign Models
+class EmailCampaignResponse(BaseModel):
+    message: str
+    total_emails_sent: int
+    successful_sends: int
+    failed_sends: int
+    failed_recipients: List[str]
+    timestamp: str
+
+class EmailStatus(BaseModel):
+    recipient_name: str
+    recipient_email: str
+    status: str
+    error_message: Optional[str] = None
+
+# Email Campaign Endpoint
+@app.post("/send-campaign-emails", response_model=EmailCampaignResponse)
+async def send_campaign_emails(
+    background_tasks: BackgroundTasks,
+    company_name: str = Form(..., description="Name of the company sending the emails"),
+    campaign_description: str = Form(..., description="Description of the marketing campaign"),
+    csv_file: UploadFile = File(..., description="CSV file with columns: Name, Email, Personal Description")
+):
+    """
+    Send personalized campaign emails to recipients from CSV file
+    
+    This endpoint accepts a CSV file with recipient information and sends
+    personalized marketing emails using AI-generated content.
+    
+    CSV Format Requirements:
+    - Name: Recipient's name
+    - Email: Recipient's email address  
+    - Personal Description: Personal interests/preferences for personalization
+    """
+    
+    # Validate file type
+    if not csv_file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV file")
+    
+    # Validate environment variables
+    sender_email = os.getenv("SENDER_EMAIL")
+    sender_password = os.getenv("SENDER_PASSWORD")
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    sender_name = os.getenv("SENDER_NAME", company_name)
+    
+    if not sender_email or not sender_password:
+        raise HTTPException(
+            status_code=500, 
+            detail="Missing SENDER_EMAIL or SENDER_PASSWORD in environment variables"
+        )
+    
+    if not groq_api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Missing GROQ_API_KEY in environment variables"
+        )
+    
+    try:
+        # Read CSV content
+        content = await csv_file.read()
+        csv_content = content.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_content))
+        
+        # Validate CSV headers
+        required_headers = {'Name', 'Email', 'Personal Description'}
+        actual_headers = set(csv_reader.fieldnames or [])
+        
+        if not required_headers.issubset(actual_headers):
+            missing_headers = required_headers - actual_headers
+            raise HTTPException(
+                status_code=400,
+                detail=f"CSV missing required headers: {', '.join(missing_headers)}"
+            )
+        
+        # Process emails in background
+        background_tasks.add_task(
+            process_email_campaign,
+            company_name,
+            campaign_description,
+            csv_content,
+            sender_email,
+            sender_password,
+            sender_name,
+            groq_api_key
+        )
+        
+        # Count recipients for immediate response
+        csv_reader_count = csv.DictReader(io.StringIO(csv_content))
+        recipient_count = sum(1 for _ in csv_reader_count)
+        
+        return EmailCampaignResponse(
+            message=f"Email campaign initiated successfully. Processing {recipient_count} recipients.",
+            total_emails_sent=recipient_count,
+            successful_sends=0,  # Will be updated in background
+            failed_sends=0,      # Will be updated in background
+            failed_recipients=[],
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing email campaign: {str(e)}")
+
+async def process_email_campaign(
+    company_name: str,
+    campaign_description: str,
+    csv_content: str,
+    sender_email: str,
+    sender_password: str,
+    sender_name: str,
+    groq_api_key: str
+):
+    """Background task to process email campaign"""
+    
+    client = Groq(api_key=groq_api_key)
+    successful_sends = 0
+    failed_sends = 0
+    failed_recipients = []
+    
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender_email, sender_password)
+            
+            csv_reader = csv.DictReader(io.StringIO(csv_content))
+            
+            for row in csv_reader:
+                try:
+                    name = row.get("Name", "").strip()
+                    email = row.get("Email", "").strip()
+                    personal_desc = row.get("Personal Description", "").strip()
+                    
+                    if not name or not email:
+                        failed_recipients.append(f"{name} <{email}> - Missing name or email")
+                        failed_sends += 1
+                        continue
+                    
+                    # Generate personalized email content
+                    prompt = f"""
+                    You are an expert advertising copywriter for {company_name}.
+                    Write a personalized, friendly, and persuasive marketing email for a campaign.
+                    
+                    Campaign Description:
+                    {campaign_description}
+
+                    Recipient Details:
+                    Name: {name}
+                    Interests and Preferences: {personal_desc}
+
+                    Guidelines:
+                    - Keep it under 100 words.
+                    - Make it conversational and emotionally engaging.
+                    - Highlight how this offer or campaign benefits the recipient personally.
+                    - End with a warm closing from {company_name}.
+                    - Use the recipient's name naturally in the email.
+                    """
+
+                    response = client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[{"role": "user", "content": prompt}]
+                    )
+
+                    email_text = response.choices[0].message.content.strip()
+
+                    # Create and send email
+                    msg = MIMEText(email_text, "plain")
+                    msg["Subject"] = f"Special Offer from {company_name}!"
+                    msg["From"] = f"{sender_name} <{sender_email}>"
+                    msg["To"] = email
+
+                    server.send_message(msg)
+                    successful_sends += 1
+                    print(f"✅ Sent email to {name} ({email})")
+                    
+                    # Small delay to avoid overwhelming the SMTP server
+                    await asyncio.sleep(0.5)
+                    
+                except Exception as e:
+                    failed_recipients.append(f"{name} <{email}> - {str(e)}")
+                    failed_sends += 1
+                    print(f"❌ Failed to send email to {name} ({email}): {str(e)}")
+                    
+    except Exception as e:
+        print(f"❌ Email campaign failed: {str(e)}")
+
+
 
 if __name__ == "__main__":
     import uvicorn
