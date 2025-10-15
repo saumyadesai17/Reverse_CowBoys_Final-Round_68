@@ -4,7 +4,7 @@ import React, { memo, useState } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Play, Pause, Eye, CheckCircle2, XCircle, Loader2, Plus, Minus, Trash2 } from "lucide-react";
+import { Settings, Play, Eye, CheckCircle2, XCircle, Loader2, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,14 +19,14 @@ interface GenericModuleNodeProps extends NodeProps {
     id: string;
     isActive: boolean;
     module_name: string;
-    inputs: Record<string, any>;
+    inputs: Record<string, unknown>;
     executionStatus?: 'idle' | 'running' | 'success' | 'error';
     executionResult?: ExecutionResult;
   };
 }
 
 // Helper function to ensure values are compatible with input types
-const getSafeValue = (value: any, inputType: string): string => {
+const getSafeValue = (value: unknown, inputType: string): string => {
   if (value === undefined || value === null) {
     return "";
   }
@@ -59,7 +59,7 @@ const getSafeValue = (value: any, inputType: string): string => {
   }
 };
 
-export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => {
+const GenericModuleNodeComponent = ({ id, data }: GenericModuleNodeProps) => {
   const { selectedNodeId, updateModule, connectionPreview, executionResults, setExecutionResult } = useCampaignStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputs, setInputs] = useState(data.inputs || {});
@@ -79,14 +79,14 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
     );
   }
 
-  const updateInput = (key: string, value: any) => {
+  const updateInput = (key: string, value: unknown) => {
     const newInputs = { ...inputs, [key]: value };
     setInputs(newInputs);
     updateModule(id, { ...data, inputs: newInputs });
   };
 
   // Get execution result from store
-  const executionResult = executionResults[id];
+  const executionResult = executionResults[id] as ExecutionResult | undefined;
   const executionStatus = isExecuting ? 'running' : executionResult?.execution_status;
 
   const handleExecute = async () => {
@@ -124,7 +124,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
   const hasOutput = executionResult && executionResult.execution_status === 'success' && executionResult.outputs;
 
   // Helper function to render object key-value pairs (read-only structure, editable values)
-  const renderObjectField = (inputKey: string, value: Record<string, any>) => {
+  const renderObjectField = (inputKey: string, value: Record<string, unknown>) => {
     const objectEntries = Object.entries(value);
     
     return (
@@ -207,8 +207,8 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
   };
 
   // Helper function to render arrays with proper schema support
-  const renderArrayField = (inputKey: string, value: any[], inputDef?: any) => {
-    const itemsSchema = inputDef?.items;
+  const renderArrayField = (inputKey: string, value: unknown[], inputDef?: Record<string, unknown>) => {
+    const itemsSchema = inputDef?.items as Record<string, unknown> | undefined;
     
     return (
       <div className="space-y-2">
@@ -238,13 +238,16 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                   if (typeof item !== 'object' || item === null) {
                     // Fix malformed array item
                     const newArray = [...value];
-                    newArray[index] = {};
+                    const newItem: Record<string, unknown> = {};
                     Object.keys(itemsSchema).forEach(key => {
-                      newArray[index][key] = "";
+                      newItem[key] = "";
                     });
+                    newArray[index] = newItem;
                     updateInput(inputKey, newArray);
                     return null;
                   }
+                  
+                  const itemObj = item as Record<string, unknown>;
                   
                   return (
                   <div key={`${inputKey}-${index}-${propKey}`} className="mb-2 last:mb-0">
@@ -255,10 +258,10 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                     {propType === "date" ? (
                       <Input
                         type="date"
-                        value={String(item?.[propKey] || "")}
+                        value={String(itemObj?.[propKey] || "")}
                         onChange={(e) => {
                           const newArray = [...value];
-                          newArray[index] = { ...newArray[index], [propKey]: e.target.value };
+                          newArray[index] = { ...itemObj, [propKey]: e.target.value };
                           updateInput(inputKey, newArray);
                         }}
                         className="text-xs bg-slate-600/50 border-slate-500 text-white focus:border-violet-500"
@@ -267,17 +270,17 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                       <Select 
                         value={
                           // Handle both string and array values for priority field
-                          propKey === "priority" && Array.isArray(item?.[propKey]) 
-                            ? String(item[propKey][0] || "") 
-                            : String(item?.[propKey] || "")
+                          propKey === "priority" && Array.isArray(itemObj?.[propKey]) 
+                            ? String((itemObj[propKey] as unknown[])[0] || "") 
+                            : String(itemObj?.[propKey] || "")
                         } 
                         onValueChange={(newValue) => {
                           const newArray = [...value];
                           // Special handling for priority field - save as array for backend compatibility
                           if (propKey === "priority") {
-                            newArray[index] = { ...newArray[index], [propKey]: [newValue] };
+                            newArray[index] = { ...itemObj, [propKey]: [newValue] };
                           } else {
-                            newArray[index] = { ...newArray[index], [propKey]: newValue };
+                            newArray[index] = { ...itemObj, [propKey]: newValue };
                           }
                           updateInput(inputKey, newArray);
                         }}
@@ -293,10 +296,10 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
                       </Select>
                     ) : (
                       <Input
-                        value={String(item?.[propKey] || "")}
+                        value={String(itemObj?.[propKey] || "")}
                         onChange={(e) => {
                           const newArray = [...value];
-                          newArray[index] = { ...newArray[index], [propKey]: e.target.value };
+                          newArray[index] = { ...itemObj, [propKey]: e.target.value };
                           updateInput(inputKey, newArray);
                         }}
                         placeholder={`Enter ${propKey.replace(/_/g, " ")}`}
@@ -331,25 +334,26 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
           size="sm"
           onClick={() => {
             // Create new item based on schema
-            let newItem: any;
+            let newItem: unknown;
             if (typeof itemsSchema === 'object' && itemsSchema !== null) {
               // Create object with empty properties
-              newItem = {};
+              const newObj: Record<string, unknown> = {};
               Object.entries(itemsSchema).forEach(([key, propType]) => {
                 // Initialize with appropriate default values based on type
                 if (propType === "enum") {
                   // Special case: priority field needs to be initialized as array for backend compatibility
                   if (key === "priority") {
-                    newItem[key] = [];
+                    newObj[key] = [];
                   } else {
-                    newItem[key] = ""; // Keep as empty string for regular enums
+                    newObj[key] = ""; // Keep as empty string for regular enums
                   }
                 } else if (propType === "date") {
-                  newItem[key] = "";
+                  newObj[key] = "";
                 } else {
-                  newItem[key] = "";
+                  newObj[key] = "";
                 }
               });
+              newItem = newObj;
             } else {
               newItem = "";
             }
@@ -364,51 +368,54 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
     );
   };
 
-  const renderInputField = (inputKey: string, inputDef: any) => {
+  const renderInputField = (inputKey: string, inputDef: Record<string, unknown>) => {
     let value = inputs[inputKey];
     
     // Handle default values
     if (value === undefined || value === null) {
-      if (inputDef.type === "array") {
+      const def = inputDef as { type?: string; default?: unknown };
+      if (def.type === "array") {
         value = [];
-      } else if (inputDef.type === "object") {
+      } else if (def.type === "object") {
         value = {};
       } else {
-        value = inputDef.default || "";
+        value = def.default || "";
       }
     }
 
+    const def = inputDef as { type?: string; min?: number; max?: number; description?: string; values?: string[]; default?: unknown; items?: Record<string, unknown> };
+
     // Handle array type based on schema definition
-    if (inputDef.type === "array" || Array.isArray(value)) {
+    if (def.type === "array" || Array.isArray(value)) {
       return (
         <div className="space-y-2">
           <Label className="text-xs text-slate-400">Array Items:</Label>
-          {renderArrayField(inputKey, Array.isArray(value) ? value : [], inputDef)}
+          {renderArrayField(inputKey, Array.isArray(value) ? value : [], inputDef as Record<string, unknown>)}
         </div>
       );
     }
 
     // Handle object type based on schema definition
-    if (inputDef.type === "object" || (value && typeof value === 'object' && !Array.isArray(value))) {
+    if (def.type === "object" || (value && typeof value === 'object' && !Array.isArray(value))) {
       return (
         <div className="space-y-2">
           <Label className="text-xs text-slate-400">Object Properties:</Label>
-          {renderObjectField(inputKey, typeof value === 'object' && value !== null ? value : {})}
+          {renderObjectField(inputKey, typeof value === 'object' && value !== null ? value as Record<string, unknown> : {})}
         </div>
       );
     }
     
     // Ensure value is compatible with the input type
-    const safeValue = getSafeValue(value, inputDef.type);
+    const safeValue = getSafeValue(value, def.type || "string");
 
-    switch (inputDef.type) {
+    switch (def.type) {
       case "string":
         return (
           <Input
             key={inputKey}
             value={safeValue}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateInput(inputKey, e.target.value)}
-            placeholder={inputDef.description || `Enter ${inputKey}`}
+            placeholder={def.description || `Enter ${inputKey}`}
             className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
           />
         );
@@ -418,8 +425,8 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
           <Input
             key={inputKey}
             type="number"
-            min={inputDef.min}
-            max={inputDef.max}
+            min={def.min}
+            max={def.max}
             value={safeValue}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateInput(inputKey, parseInt(e.target.value) || 0)}
             className="text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-violet-500"
@@ -437,7 +444,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
               <SelectValue placeholder={`Select ${inputKey}`} />
             </SelectTrigger>
             <SelectContent className="bg-slate-800 border-slate-700">
-              {inputDef.values?.map((option: string) => (
+              {def.values?.map((option: string) => (
                 <SelectItem key={option} value={option} className="text-white hover:bg-slate-700 focus:bg-slate-700">
                   {option.replace(/_/g, " ").toUpperCase()}
                 </SelectItem>
@@ -467,7 +474,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
         return (
           <Input
             key={inputKey}
-            value={typeof value === "object" ? JSON.stringify(value) : value}
+            value={typeof value === "object" ? JSON.stringify(value) : String(value || "")}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               try {
                 updateInput(inputKey, JSON.parse(e.target.value));
@@ -533,9 +540,6 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
   }
 
   // Check if this node has compatible handles during connection preview
-  const isConnectionTarget = connectionPreview && connectionPreview.compatibleTargets.some(
-    target => target.nodeId === id
-  );
   const isConnectionSource = connectionPreview && connectionPreview.sourceNode === id;
   const isConnectionActive = connectionPreview !== null;
   
@@ -654,16 +658,17 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
           {isExpanded && (
             <div className="space-y-3 pt-3 border-t border-slate-700">
               {inputKeys.map((inputKey) => {
-                const inputDef = (moduleDefinition.inputs as any)[inputKey];
+                const inputDef = (moduleDefinition.inputs as Record<string, unknown>)[inputKey];
+                const def = inputDef as { required?: boolean };
                 return (
                   <div key={inputKey} className="space-y-1">
                     <Label className="text-xs flex items-center gap-1 text-slate-300">
                       {inputKey.replace(/_/g, " ")}
-                      {inputDef?.required && (
+                      {def?.required && (
                         <span className="text-red-400">*</span>
                       )}
                     </Label>
-                    {renderInputField(inputKey, inputDef)}
+                    {renderInputField(inputKey, inputDef as Record<string, unknown>)}
                   </div>
                 );
               })}
@@ -743,7 +748,7 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
       )}
       
       {/* Output Viewer Modal */}
-      {showOutputViewer && executionResult && (
+      {showOutputViewer && executionResult && executionResult.execution_status === 'success' && (
         <OutputViewer
           moduleName={data.module_name}
           result={executionResult}
@@ -752,4 +757,8 @@ export const GenericModuleNode = memo(({ id, data }: GenericModuleNodeProps) => 
       )}
     </div>
   );
-});
+};
+
+GenericModuleNodeComponent.displayName = 'GenericModuleNode';
+
+export const GenericModuleNode = memo(GenericModuleNodeComponent);

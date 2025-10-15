@@ -11,11 +11,11 @@ import { useCampaignStore } from "@/stores/campaignStore";
 interface OutputNodeProps extends NodeProps {
   data: {
     label: string;
-    results: any[];
+    results: unknown[];
   };
 }
 
-export const OutputNode = memo(({ id, data }: OutputNodeProps) => {
+const OutputNodeComponent = ({ id, data }: OutputNodeProps) => {
   const { connectionPreview, selectedNodeId } = useCampaignStore();
   const isSelected = selectedNodeId === id;
   
@@ -65,11 +65,14 @@ export const OutputNode = memo(({ id, data }: OutputNodeProps) => {
           
           {data.results.length > 0 && (
             <div className="space-y-1">
-              {data.results.map((result, index) => (
-                <div key={index} className="p-2 bg-slate-700/50 border border-slate-600 rounded text-xs text-slate-200">
-                  {result.name || `Asset ${index + 1}`}
-                </div>
-              ))}
+              {data.results.map((result, index) => {
+                const resultObj = result as { name?: string };
+                return (
+                  <div key={index} className="p-2 bg-slate-700/50 border border-slate-600 rounded text-xs text-slate-200">
+                    {resultObj.name || `Asset ${index + 1}`}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -87,4 +90,8 @@ export const OutputNode = memo(({ id, data }: OutputNodeProps) => {
     </Card>
     </div>
   );
-});
+};
+
+OutputNodeComponent.displayName = 'OutputNode';
+
+export const OutputNode = memo(OutputNodeComponent);

@@ -55,13 +55,13 @@ function detectCampaignType(brief: string): keyof typeof workflowTemplates {
 }
 
 // Generate initial input values from brief
-function generateInitialInputs(moduleName: string, brief: string): Record<string, any> {
+function generateInitialInputs(moduleName: string, brief: string): Record<string, unknown> {
   const moduleDefinition = MODULE_DEFINITIONS[moduleName as keyof typeof MODULE_DEFINITIONS];
   if (!moduleDefinition) return {};
 
-  const inputs: Record<string, any> = {};
+  const inputs: Record<string, unknown> = {};
 
-  Object.entries(moduleDefinition.inputs).forEach(([key, inputDef]: [string, any]) => {
+  Object.entries(moduleDefinition.inputs).forEach(([key, inputDef]: [string, Record<string, unknown>]) => {
     // Set defaults or extract from brief
     if (inputDef.default !== undefined) {
       inputs[key] = inputDef.default;
@@ -83,7 +83,8 @@ function generateInitialInputs(moduleName: string, brief: string): Record<string
     } else if (inputDef.type === "array") {
       inputs[key] = [];
     } else if (inputDef.type === "enum") {
-      inputs[key] = inputDef.values ? inputDef.values[0] : "";
+      const values = inputDef.values as unknown[];
+      inputs[key] = (values && Array.isArray(values) && values.length > 0) ? values[0] : "";
     }
   });
 

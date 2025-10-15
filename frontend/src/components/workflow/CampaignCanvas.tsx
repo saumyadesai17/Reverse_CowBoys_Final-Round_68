@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -13,6 +13,8 @@ import {
   Edge,
   Connection,
   ConnectionMode,
+  ReactFlowInstance,
+  OnConnectStart,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -25,9 +27,8 @@ import { Sidebar } from "./Sidebar";
 import { CampaignCalendar } from "./CampaignCalendar";
 import { StrategyPanel } from "./StrategyPanel";
 import { MODULE_DEFINITIONS, CONNECTION_MATRIX } from "@/lib/moduleDefinitions";
-import { Eye, EyeOff, Play, Square } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { WorkflowExecutionService } from "@/lib/workflowExecution";
-import { getStoredCampaignResponse } from "@/lib/backendWorkflowGenerator";
 
 // Helper function to convert ReactFlow edges to workflow connections format
 const convertEdgesToConnections = (nodes: Node[], edges: Edge[]) => {
@@ -101,13 +102,13 @@ const defaultEdgeOptions = {
 export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: CampaignCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [reactFlowInstance, setReactFlowInstance] = React.useState<any>(null);
+  const [reactFlowInstance, setReactFlowInstance] = React.useState<ReactFlowInstance | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isMinimapCollapsed, setIsMinimapCollapsed] = React.useState(false);
   const [showCalendar, setShowCalendar] = React.useState(false);
   const [isExecutingWorkflow, setIsExecutingWorkflow] = React.useState(false);
   const [executionProgress, setExecutionProgress] = React.useState<{completed: number, total: number}>({completed: 0, total: 0});
-  const { selectedNodeId, setSelectedNodeId, connectionPreview, setConnectionPreview, setExecutionResult, strategyPlan, setStrategyPlan } = useCampaignStore();
+  const { setSelectedNodeId, setConnectionPreview, setExecutionResult, strategyPlan, setStrategyPlan } = useCampaignStore();
 
   // Update nodes and edges when props change
   useEffect(() => {
@@ -221,17 +222,18 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
 
       // Initialize inputs with default values from module definition
       const moduleDefinition = MODULE_DEFINITIONS[dropData.module_name as keyof typeof MODULE_DEFINITIONS];
-      const initialInputs: Record<string, any> = {};
+      const initialInputs: Record<string, unknown> = {};
       
       if (moduleDefinition) {
-        Object.entries(moduleDefinition.inputs).forEach(([key, inputDef]: [string, any]) => {
-          if (inputDef.type === 'array') {
+        Object.entries(moduleDefinition.inputs).forEach(([key, inputDef]) => {
+          const def = inputDef as { type?: string; properties?: Record<string, unknown>; default?: unknown };
+          if (def.type === 'array') {
             initialInputs[key] = [];
-          } else if (inputDef.type === 'object') {
+          } else if (def.type === 'object') {
             // Initialize object with proper structure based on properties definition
-            const objectValue: Record<string, any> = {};
-            if (inputDef.properties) {
-              Object.entries(inputDef.properties).forEach(([propKey, propType]) => {
+            const objectValue: Record<string, unknown> = {};
+            if (def.properties) {
+              Object.entries(def.properties).forEach(([propKey, propType]) => {
                 if (Array.isArray(propType)) {
                   objectValue[propKey] = [];
                 } else if (propType === 'object') {
@@ -300,16 +302,17 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
     return compatibleTargets;
   }, [nodes]);
 
-  const onConnectStart = useCallback((event: any, params: any) => {
-    const compatibleTargets = getCompatibleTargets(params.nodeId, params.handleId);
+  const onConnectStart = useCallback<OnConnectStart>((event, params) => {
+    if (!params) return;
+    const compatibleTargets = getCompatibleTargets(params.nodeId!, params.handleId!);
     setConnectionPreview({
-      sourceNode: params.nodeId,
-      sourceHandle: params.handleId,
+      sourceNode: params.nodeId!,
+      sourceHandle: params.handleId!,
       compatibleTargets,
     });
   }, [getCompatibleTargets, setConnectionPreview]);
 
-  const onConnectEnd = useCallback((event: any) => {
+  const onConnectEnd = useCallback(() => {
     setConnectionPreview(null);
   }, [setConnectionPreview]);
 
@@ -318,7 +321,6 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
     let position = { x: 300, y: 200 }; // Default position
     
     if (reactFlowInstance) {
-      const viewport = reactFlowInstance.getViewport();
       const bounds = document.querySelector('.react-flow')?.getBoundingClientRect();
       
       if (bounds) {
@@ -331,17 +333,18 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
 
     // Initialize inputs with default values from module definition
     const moduleDefinition = MODULE_DEFINITIONS[moduleId as keyof typeof MODULE_DEFINITIONS];
-    const initialInputs: Record<string, any> = {};
+    const initialInputs: Record<string, unknown> = {};
     
     if (moduleDefinition) {
-      Object.entries(moduleDefinition.inputs).forEach(([key, inputDef]: [string, any]) => {
-        if (inputDef.type === 'array') {
+      Object.entries(moduleDefinition.inputs).forEach(([key, inputDef]: [string, unknown]) => {
+        const def = inputDef as Record<string, unknown>;
+        if (def.type === 'array') {
           initialInputs[key] = [];
-        } else if (inputDef.type === 'object') {
+        } else if (def.type === 'object') {
           // Initialize object with proper structure based on properties definition
-          const objectValue: Record<string, any> = {};
-          if (inputDef.properties) {
-            Object.entries(inputDef.properties).forEach(([propKey, propType]) => {
+          const objectValue: Record<string, unknown> = {};
+          if (def.properties) {
+            Object.entries(def.properties as Record<string, unknown>).forEach(([propKey, propType]) => {
               if (Array.isArray(propType)) {
                 objectValue[propKey] = [];
               } else if (propType === 'object') {
@@ -353,7 +356,7 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
           }
           initialInputs[key] = objectValue;
         } else {
-          initialInputs[key] = inputDef.default || (inputDef.type === 'integer' ? 0 : inputDef.type === 'boolean' ? false : '');
+          initialInputs[key] = def.default || (def.type === 'integer' ? 0 : def.type === 'boolean' ? false : '');
         }
       });
       
@@ -402,7 +405,7 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
           id: node.id,
           data: {
             module_name: node.data.module_name as string,
-            inputs: node.data.inputs as Record<string, any>
+            inputs: node.data.inputs as Record<string, unknown>
           }
         })),
         connections,
@@ -424,14 +427,19 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
       setIsExecutingWorkflow(false);
       setExecutionProgress({ completed: 0, total: 0 });
     }
-  }, [nodes, isExecutingWorkflow, setExecutionResult]);
+  }, [nodes, edges, isExecutingWorkflow, setExecutionResult]);
 
   return (
     <>
       <div className="h-full w-full flex overflow-hidden">
         <div className="flex-1 relative h-full">
           {/* Strategy Panel - AI Agent's Thought Process */}
-          {strategyPlan && <StrategyPanel strategyPlan={strategyPlan} onClose={() => setStrategyPlan(null)} />}
+          {strategyPlan && (
+            <StrategyPanel 
+              strategyPlan={strategyPlan} 
+              onClose={() => setStrategyPlan(null)} 
+            />
+          )}
           
           <ReactFlow
             nodes={nodes}
@@ -505,7 +513,6 @@ export function CampaignCanvas({ initialNodes = [], initialEdges = [] }: Campaig
         </div>
         <Sidebar 
           onAddModule={handleAddModule}
-          onRunCampaign={() => setShowCalendar(true)}
           onRunWorkflow={handleRunWorkflow}
           isExecutingWorkflow={isExecutingWorkflow}
           executionProgress={executionProgress}

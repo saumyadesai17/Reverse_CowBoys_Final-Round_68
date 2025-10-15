@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import NextImage from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Calendar as CalendarIcon,
-  Image,
+  Image as ImageIcon,
   Type,
   Video,
   Send,
@@ -136,7 +137,7 @@ const sampleCampaigns: CampaignItem[] = [
 const getTypeIcon = (type: CampaignItem['type']) => {
   switch (type) {
     case 'image':
-      return <Image className="w-3 h-3" />;
+      return <ImageIcon className="w-3 h-3" />;
     case 'video':
       return <Video className="w-3 h-3" />;
     case 'copy':
@@ -256,9 +257,11 @@ const CampaignDetailModal = ({ campaign, onClose }: {
                       <div className="grid grid-cols-2 gap-2">
                         {enrichedData.asset_urls.map((url, index) => (
                           <div key={index} className="relative group">
-                            <img 
+                            <NextImage 
                               src={url} 
-                              alt={`Asset ${index + 1}`}
+                              alt={`Visual asset ${index + 1}`}
+                              width={200}
+                              height={96}
                               className="w-full h-24 object-cover rounded-lg border border-slate-600"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 rounded-lg transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -463,10 +466,12 @@ const CampaignCard = ({ campaign, onClick }: {
         <div className="mt-1 space-y-1">
           <div className="flex gap-1">
             {campaign.detailed_info.asset_urls.slice(0, 2).map((url, index) => (
-              <img 
+              <NextImage 
                 key={index}
                 src={url} 
-                alt={`Visual Asset ${index + 1}`}
+                alt={`Visual asset ${index + 1}`}
+                width={32}
+                height={24}
                 className="w-8 h-6 object-cover rounded border border-blue-200"
                 title="Generated from Visual Asset Generator"
               />
@@ -679,7 +684,7 @@ export function CampaignCalendarWithTimeline({ timelineData }: CampaignCalendarW
       };
 
       // Generate title from content type and platform
-      const generateTitle = (contentType?: string, platform?: string) => {
+      const generateTitle = (contentType?: string) => {
         if (!contentType) return 'Social Post';
         
         const typeMap: { [key: string]: string } = {
@@ -708,7 +713,7 @@ export function CampaignCalendarWithTimeline({ timelineData }: CampaignCalendarW
 
       return {
         id,
-        title: generateTitle(contentType, slot.platform),
+        title: generateTitle(contentType),
         type: getDisplayType(contentType),
         platform: slot.platform,
         time,
@@ -958,10 +963,12 @@ const CampaignCardDark = ({ campaign, onClick }: {
         <div className="mt-1 space-y-1">
           <div className="flex gap-1">
             {campaign.detailed_info.asset_urls.slice(0, 2).map((url, index) => (
-              <img 
+              <NextImage 
                 key={index}
                 src={url} 
-                alt={`Visual Asset ${index + 1}`}
+                alt={`Visual asset ${index + 1}`}
+                width={32}
+                height={24}
                 className="w-8 h-6 object-cover rounded border border-slate-500"
                 title="Generated from Visual Asset Generator"
               />

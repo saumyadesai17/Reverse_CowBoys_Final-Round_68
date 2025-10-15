@@ -28,14 +28,14 @@ interface VisualAssetNodeProps extends NodeProps {
   };
 }
 
-export const VisualAssetNode = memo(({ id, data }: VisualAssetNodeProps) => {
+const VisualAssetNodeComponent = ({ id, data }: VisualAssetNodeProps) => {
   const { selectedNodeId, updateModule } = useCampaignStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputs, setInputs] = useState(data.module.inputs);
 
   const isSelected = selectedNodeId === id;
 
-  const updateInput = (key: string, value: any) => {
+  const updateInput = (key: string, value: unknown) => {
     const newInputs = { ...inputs, [key]: value };
     setInputs(newInputs);
     updateModule(id, { ...data.module, inputs: newInputs });
@@ -218,4 +218,8 @@ export const VisualAssetNode = memo(({ id, data }: VisualAssetNodeProps) => {
       </div>
     </div>
   );
-});
+};
+
+VisualAssetNodeComponent.displayName = 'VisualAssetNode';
+
+export const VisualAssetNode = memo(VisualAssetNodeComponent);

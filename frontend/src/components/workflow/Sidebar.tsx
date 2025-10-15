@@ -11,7 +11,6 @@ import {
   Type, 
   Users, 
   Calendar,
-  Globe,
   BarChart,
   Play,
   Settings,
@@ -24,7 +23,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
-import { MODULE_DEFINITIONS, MODULE_CATEGORIES } from "@/lib/moduleDefinitions";
+import { MODULE_DEFINITIONS } from "@/lib/moduleDefinitions";
 
 const moduleIcons = {
   visual_asset_generator: Image,
@@ -50,11 +49,8 @@ const availableModules = Object.entries(MODULE_DEFINITIONS).map(([key, module]) 
   color: module.color
 }));
 
-const categories = ["All", ...Object.keys(MODULE_CATEGORIES)];
-
 interface SidebarProps {
   onAddModule?: (moduleId: string) => void;
-  onRunCampaign?: () => void;
   onRunWorkflow?: () => Promise<void>;
   isExecutingWorkflow?: boolean;
   executionProgress?: { completed: number; total: number };
@@ -65,7 +61,6 @@ interface SidebarProps {
 
 export function Sidebar({ 
   onAddModule, 
-  onRunCampaign, 
   onRunWorkflow, 
   isExecutingWorkflow = false, 
   executionProgress = { completed: 0, total: 0 },
@@ -73,7 +68,7 @@ export function Sidebar({
   isCollapsed = false, 
   onToggleCollapse 
 }: SidebarProps) {
-  const [selectedCategory, setSelectedCategory] = React.useState("All");
+  const [selectedCategory] = React.useState("All");
 
   const filteredModules = availableModules.filter(module => 
     selectedCategory === "All" || module.category === selectedCategory

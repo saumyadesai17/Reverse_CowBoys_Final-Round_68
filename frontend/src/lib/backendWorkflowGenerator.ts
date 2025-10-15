@@ -1,5 +1,6 @@
 import { Node, Edge } from "@xyflow/react";
 import { CampaignResponse, ModuleConnection } from "./campaignApi";
+import { MODULE_DEFINITIONS } from './moduleDefinitions';
 
 interface WorkflowGenerationResult {
   nodes: Node[];
@@ -9,14 +10,14 @@ interface WorkflowGenerationResult {
 // Convert backend module configurations to frontend node format
 function createNodeFromModuleConfig(
   moduleName: string,
-  config: any,
+  config: Record<string, unknown>,
   moduleNames: string[],
   connections: ModuleConnection[],
   useSmartPositioning: boolean = true
 ): Node {
   // Use smart positioning based on workflow hierarchy, fallback to index-based
   const position = useSmartPositioning 
-    ? calculateSmartNodePosition(moduleName, moduleNames, connections)
+    ? calculateSmartNodePosition(moduleName, moduleNames)
     : calculateNodePosition(moduleNames.indexOf(moduleName), moduleNames.length);
   
   // Process config while preserving data types and structure
@@ -36,12 +37,11 @@ function createNodeFromModuleConfig(
 }
 
 // Process backend config to preserve the original data structure
-function processConfigForFrontend(config: any, moduleName: string): Record<string, any> {
-  // Import module definitions to understand expected input types
-  const { MODULE_DEFINITIONS } = require('./moduleDefinitions');
+function processConfigForFrontend(config: Record<string, unknown>, moduleName: string): Record<string, unknown> {
+  // Use imported module definitions to understand expected input types
   const moduleDefinition = MODULE_DEFINITIONS[moduleName as keyof typeof MODULE_DEFINITIONS];
   
-  const processed: Record<string, any> = {};
+  const processed: Record<string, unknown> = {};
   
   // HARDCODE OVERRIDE: Force campaign_duration to 2025 October-December for all modules
   if (config.campaign_duration) {
@@ -53,11 +53,12 @@ function processConfigForFrontend(config: any, moduleName: string): Record<strin
   
   // First, process all existing config values
   for (const [key, value] of Object.entries(config)) {
-    const inputDef = moduleDefinition?.inputs?.[key] as any; // Type assertion for dynamic access
+    const inputDef = moduleDefinition?.inputs?.[key as keyof typeof moduleDefinition.inputs] as Record<string, unknown> | undefined;
     
     // If we have a definition for this input, ensure proper data type initialization
     if (inputDef) {
-      if (inputDef.type === 'array') {
+      const def = inputDef as { type?: string; properties?: Record<string, unknown> };
+      if (def.type === 'array') {
         // Ensure array types are properly initialized
         if (Array.isArray(value)) {
           processed[key] = [...value]; // Create a copy
@@ -66,14 +67,14 @@ function processConfigForFrontend(config: any, moduleName: string): Record<strin
         } else {
           processed[key] = [];
         }
-      } else if (inputDef.type === 'object') {
+      } else if (def.type === 'object') {
         // Ensure object types are properly initialized
         if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-          const objectValue = { ...value } as Record<string, any>; // Create a copy with type assertion
+          const objectValue = { ...value } as Record<string, unknown>; // Create a copy with type assertion
           
           // Ensure array properties within objects are properly handled
-          if (inputDef.properties) {
-            for (const [propKey, propType] of Object.entries(inputDef.properties)) {
+          if (def.properties) {
+            for (const [propKey, propType] of Object.entries(def.properties)) {
               if (Array.isArray(propType) && objectValue[propKey] !== undefined) {
                 // This property should be an array
                 if (!Array.isArray(objectValue[propKey])) {
@@ -120,13 +121,13 @@ function processConfigForFrontend(config: any, moduleName: string): Record<strin
   if (moduleDefinition?.inputs) {
     for (const [key, inputDef] of Object.entries(moduleDefinition.inputs)) {
       if (!(key in processed)) {
-        const def = inputDef as any; // Type assertion for dynamic module definitions
+        const def = inputDef as { type?: string; default?: unknown; properties?: Record<string, unknown> };
         // Initialize missing inputs based on their type
         if (def.type === 'array') {
           processed[key] = [];
         } else if (def.type === 'object') {
           // Initialize object with proper structure based on properties definition
-          const objectValue: Record<string, any> = {};
+          const objectValue: Record<string, unknown> = {};
           if (def.properties) {
             for (const [propKey, propType] of Object.entries(def.properties)) {
               if (Array.isArray(propType)) {
@@ -172,8 +173,7 @@ function calculateNodePosition(index: number, total: number): { x: number; y: nu
 // Advanced positioning based on workflow hierarchy
 function calculateSmartNodePosition(
   moduleName: string, 
-  moduleNames: string[], 
-  connections: ModuleConnection[]
+  moduleNames: string[]
 ): { x: number; y: number } {
   // Define workflow layers based on typical flow
   const layerDefinitions = {
@@ -206,7 +206,7 @@ function calculateSmartNodePosition(
   let layer = 0;
   let positionInLayer = 0;
   
-  for (const [layerName, modules] of Object.entries(layerDefinitions)) {
+  for (const modules of Object.values(layerDefinitions)) {
     const moduleIndex = modules.indexOf(moduleName);
     if (moduleIndex !== -1) {
       positionInLayer = moduleIndex;
@@ -231,7 +231,7 @@ function calculateSmartNodePosition(
 function createEdgesFromConnections(connections: ModuleConnection[]): Edge[] {
   const edges: Edge[] = [];
   
-  connections.forEach((moduleConnection, moduleIndex) => {
+  connections.forEach((moduleConnection) => {
     moduleConnection.connections.forEach((connection, connectionIndex) => {
       const edgeId = `e-${moduleConnection.module_name}-${connection.target_module}-${connectionIndex}`;
       
@@ -287,7 +287,7 @@ export function generateWorkflowFromCampaignResponse(
 }
 
 // Fallback function to ensure compatibility with existing code
-export function generateWorkflowFromBrief(brief: string): WorkflowGenerationResult {
+export function generateWorkflowFromBrief(): WorkflowGenerationResult {
   // This is a fallback for when the backend API is not available
   // You can keep the existing logic here or return empty workflow
   console.warn("Using fallback workflow generation. Consider using backend API instead.");

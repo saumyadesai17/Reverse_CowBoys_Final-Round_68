@@ -75,7 +75,7 @@ export default function ResetPasswordPage() {
 
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-3">Reset your password</h1>
-          <p className="text-slate-300">Enter your email and we'll send you a reset link</p>
+          <p className="text-slate-300">Enter your email and we&apos;ll send you a reset link</p>
         </div>
 
         <Card className="reset-card bg-slate-900/50 backdrop-blur-xl border-slate-800 p-8">
@@ -120,7 +120,7 @@ export default function ResetPasswordPage() {
               </div>
               <h3 className="text-xl font-bold text-white mb-2">Check your email</h3>
               <p className="text-slate-300 mb-6">
-                We've sent a password reset link to <strong className="text-white">{email}</strong>
+                We&apos;ve sent a password reset link to <strong className="text-white">{email}</strong>
               </p>
               <Button variant="outline" asChild className="w-full">
                 <Link href="/auth/login">

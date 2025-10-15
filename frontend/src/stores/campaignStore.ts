@@ -16,8 +16,8 @@ export interface CampaignHistory {
   category: string;
   color: string;
   workflowData?: {
-    nodes: any[];
-    edges: any[];
+    nodes: unknown[];
+    edges: unknown[];
   };
 }
 
@@ -36,11 +36,11 @@ interface CampaignState {
     compatibleTargets: Array<{nodeId: string, handleId: string}>;
   } | null) => void;
   
-  modules: Record<string, any>;
-  updateModule: (id: string, data: any) => void;
+  modules: Record<string, unknown>;
+  updateModule: (id: string, data: unknown) => void;
   
-  executionResults: Record<string, any>;
-  setExecutionResult: (nodeId: string, result: any) => void;
+  executionResults: Record<string, unknown>;
+  setExecutionResult: (nodeId: string, result: unknown) => void;
   
   // Strategy Plan from AI Agent
   strategyPlan: string | null;

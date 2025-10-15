@@ -7,12 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// @ts-ignore - IDE cache issue
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Mail, 
   Plus, 
-  Minus, 
   Trash2, 
   Send, 
   CheckCircle2, 
@@ -32,7 +30,7 @@ interface EmailSenderNodeProps extends NodeProps {
     id: string;
     isActive: boolean;
     module_name: string;
-    inputs: Record<string, any>;
+    inputs: Record<string, unknown>;
     executionStatus?: 'idle' | 'running' | 'success' | 'error';
     executionResult?: ExecutionResult;
   };
@@ -44,7 +42,15 @@ interface EmailRecipient {
   personal_description: string;
 }
 
-export const EmailSenderNode = memo(({ id, data }: EmailSenderNodeProps) => {
+interface EmailFormData {
+  company_name: string;
+  campaign_description: string;
+  recipients: EmailRecipient[];
+  sender_name: string;
+  email_subject: string;
+}
+
+const EmailSenderNodeComponent = ({ id, data }: EmailSenderNodeProps) => {
   const { selectedNodeId, updateModule, connectionPreview, executionResults, setExecutionResult } = useCampaignStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputs, setInputs] = useState(data.inputs || {});
@@ -53,25 +59,25 @@ export const EmailSenderNode = memo(({ id, data }: EmailSenderNodeProps) => {
 
   const isSelected = selectedNodeId === id;
 
-  // Initialize default values
-  const defaultInputs = {
-    company_name: inputs.company_name || "",
-    campaign_description: inputs.campaign_description || "",
-    recipients: inputs.recipients || [],
-    sender_name: inputs.sender_name || "",
-    email_subject: inputs.email_subject || ""
+  // Initialize default values with proper typing
+  const defaultInputs: EmailFormData = {
+    company_name: (inputs.company_name as string) || "",
+    campaign_description: (inputs.campaign_description as string) || "",
+    recipients: (inputs.recipients as EmailRecipient[]) || [],
+    sender_name: (inputs.sender_name as string) || "",
+    email_subject: (inputs.email_subject as string) || ""
   };
 
-  const [formData, setFormData] = useState(defaultInputs);
+  const [formData, setFormData] = useState<EmailFormData>(defaultInputs);
 
-  const updateInput = (key: string, value: any) => {
+  const updateInput = (key: string, value: unknown) => {
     const newInputs = { ...inputs, [key]: value };
     setInputs(newInputs);
     updateModule(id, { ...data, inputs: newInputs });
   };
 
-  const updateFormData = (key: string, value: any) => {
-    const newFormData = { ...formData, [key]: value };
+  const updateFormData = (key: keyof EmailFormData, value: string | EmailRecipient[]) => {
+    const newFormData = { ...formData, [key]: value } as EmailFormData;
     setFormData(newFormData);
     updateInput(key, value);
   };
@@ -98,7 +104,7 @@ export const EmailSenderNode = memo(({ id, data }: EmailSenderNodeProps) => {
   };
 
   // Get execution result from store
-  const executionResult = executionResults[id];
+  const executionResult = executionResults[id] as ExecutionResult | undefined;
   const executionStatus = isExecuting ? 'running' : executionResult?.execution_status;
 
   const handleExecute = async () => {
@@ -122,7 +128,7 @@ export const EmailSenderNode = memo(({ id, data }: EmailSenderNodeProps) => {
     
     setIsExecuting(true);
     try {
-      const result = await WorkflowExecutionService.executeModule(data.module_name, formData);
+      const result = await WorkflowExecutionService.executeModule(data.module_name, { ...formData } as unknown as Record<string, unknown>);
       setExecutionResult(id, result);
     } catch (error) {
       console.error('Email campaign execution failed:', error);
@@ -152,9 +158,6 @@ export const EmailSenderNode = memo(({ id, data }: EmailSenderNodeProps) => {
   const hasOutput = executionResult && executionResult.execution_status === 'success' && executionResult.outputs;
 
   // Check if this node has compatible handles during connection preview
-  const isConnectionTarget = connectionPreview && connectionPreview.compatibleTargets.some(
-    target => target.nodeId === id
-  );
   const isConnectionSource = connectionPreview && connectionPreview.sourceNode === id;
   const isConnectionActive = connectionPreview !== null;
   
@@ -383,7 +386,7 @@ export const EmailSenderNode = memo(({ id, data }: EmailSenderNodeProps) => {
                   <div className="text-center py-6 text-slate-500 border border-slate-600 rounded bg-slate-700/30">
                     <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p className="text-xs">No recipients added yet</p>
-                    <p className="text-xs">Click "Add" to add email recipients</p>
+                    <p className="text-xs">Click &quot;Add&quot; to add email recipients</p>
                   </div>
                 )}
               </div>
@@ -447,7 +450,7 @@ export const EmailSenderNode = memo(({ id, data }: EmailSenderNodeProps) => {
       )}
       
       {/* Output Viewer Modal */}
-      {showOutputViewer && executionResult && (
+      {showOutputViewer && executionResult && executionResult.execution_status === 'success' && (
         <OutputViewer
           moduleName={data.module_name}
           result={executionResult}
@@ -473,4 +476,8 @@ export const EmailSenderNode = memo(({ id, data }: EmailSenderNodeProps) => {
       `}</style>
     </div>
   );
-});
+};
+
+EmailSenderNodeComponent.displayName = 'EmailSenderNode';
+
+export const EmailSenderNode = memo(EmailSenderNodeComponent);

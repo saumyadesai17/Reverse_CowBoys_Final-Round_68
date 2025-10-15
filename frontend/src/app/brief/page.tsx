@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { gsap } from "gsap";
-import { CampaignApiService, CampaignResponse } from "@/lib/campaignApi";
+import { CampaignApiService } from "@/lib/campaignApi";
 import { storeCampaignResponse } from "@/lib/backendWorkflowGenerator";
 
 const exampleBriefs = [
@@ -72,7 +72,6 @@ const features = [
 export default function BriefPage() {
   const [brief, setBrief] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [thinkingText, setThinkingText] = useState("");
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [activeFeature, setActiveFeature] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -210,7 +209,6 @@ export default function BriefPage() {
 
     const thinkingInterval = setInterval(() => {
       if (currentStep < thinkingSteps.length) {
-        setThinkingText(thinkingSteps[currentStep]);
         setCompletedSteps(prev => [...prev, currentStep]);
         currentStep++;
       }
@@ -223,7 +221,6 @@ export default function BriefPage() {
       // Complete all thinking steps
       clearInterval(thinkingInterval);
       setCompletedSteps([0, 1, 2, 3, 4, 5]);
-      setThinkingText("Campaign workflow generated successfully!");
       
       // Store the campaign response for the canvas
       storeCampaignResponse(campaignResponse);

@@ -5,7 +5,7 @@ export interface CampaignResponse {
   strategy_plan: string;
   research_summary: string;
   sources: string[];
-  module_configurations: Record<string, any>;
+  module_configurations: Record<string, Record<string, unknown>>;
   module_connections: ModuleConnection[];
   timestamp: string;
 }

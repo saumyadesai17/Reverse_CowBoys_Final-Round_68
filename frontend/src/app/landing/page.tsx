@@ -150,8 +150,8 @@ export default function LandingPage() {
 
       // ScrollTrigger animations with immediate, smooth triggers
       const featureCards = gsap.utils.toArray(".feature-card");
-      featureCards.forEach((card: any, index: number) => {
-        gsap.fromTo(card,
+      featureCards.forEach((card) => {
+        gsap.fromTo(card as gsap.TweenTarget,
           { y: 30, opacity: 0 },
           {
             y: 0,
@@ -159,7 +159,7 @@ export default function LandingPage() {
             duration: 0.5,
             ease: "power1.out",
             scrollTrigger: {
-              trigger: card,
+              trigger: card as gsap.DOMTarget,
               start: "top 95%",
               end: "top 70%",
               scrub: 0.5,
@@ -170,8 +170,8 @@ export default function LandingPage() {
       });
 
       const moduleCards = gsap.utils.toArray(".module-card");
-      moduleCards.forEach((card: any, index: number) => {
-        gsap.fromTo(card,
+      moduleCards.forEach((card) => {
+        gsap.fromTo(card as gsap.TweenTarget,
           { scale: 0.98, opacity: 0 },
           {
             scale: 1,
@@ -179,7 +179,7 @@ export default function LandingPage() {
             duration: 0.4,
             ease: "power1.out",
             scrollTrigger: {
-              trigger: card,
+              trigger: card as gsap.DOMTarget,
               start: "top 95%",
               end: "top 75%",
               scrub: 0.3,
@@ -209,8 +209,8 @@ export default function LandingPage() {
 
       // Pricing cards with immediate smooth animation
       const pricingCards = gsap.utils.toArray(".pricing-card");
-      pricingCards.forEach((card: any, index: number) => {
-        gsap.fromTo(card,
+      pricingCards.forEach((card) => {
+        gsap.fromTo(card as gsap.TweenTarget,
           { y: 25, opacity: 0 },
           {
             y: 0,
@@ -218,7 +218,7 @@ export default function LandingPage() {
             duration: 0.4,
             ease: "power1.out",
             scrollTrigger: {
-              trigger: card,
+              trigger: card as gsap.DOMTarget,
               start: "top 98%",
               end: "top 80%",
               scrub: 0.4,

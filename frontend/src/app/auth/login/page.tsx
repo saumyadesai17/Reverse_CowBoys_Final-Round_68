@@ -196,7 +196,7 @@ export default function LoginPage() {
 
               <div className="mt-8 text-center">
                 <p className="text-slate-300">
-                  Don't have an account?{" "}
+                  Don&apos;t have an account?{" "}
                   <Link href="/auth/signup" className="text-violet-400 hover:text-violet-300 font-medium">
                     Sign up for free
                   </Link>
@@ -246,8 +246,8 @@ export default function LoginPage() {
               <Card className="bg-gradient-to-br from-violet-500/20 to-blue-500/20 backdrop-blur-sm border-violet-500/30 p-6 mt-8">
                 <blockquote className="text-white">
                   <p className="text-lg mb-4">
-                    "CampaignAI reduced our campaign creation time from weeks to hours. The visual workflow
-                    builder is a game-changer."
+                    &quot;CampaignAI reduced our campaign creation time from weeks to hours. The visual workflow
+                    builder is a game-changer.&quot;
                   </p>
                   <footer className="text-slate-200">
                     <strong>Sarah Chen</strong>

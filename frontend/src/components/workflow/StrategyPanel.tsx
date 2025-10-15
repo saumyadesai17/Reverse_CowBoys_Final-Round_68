@@ -35,7 +35,7 @@ export function StrategyPanel({ strategyPlan, isCollapsed: initialCollapsed = tr
               </div>
               <div className="text-left">
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  AI Agent's Strategy
+                  AI Agent&apos;s Strategy
                 </h3>
                 <p className="text-xs text-violet-300">Thought process behind this workflow</p>
               </div>

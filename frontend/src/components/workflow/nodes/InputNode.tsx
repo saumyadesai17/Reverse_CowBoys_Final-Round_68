@@ -17,7 +17,7 @@ interface InputNodeProps extends NodeProps {
   };
 }
 
-export const InputNode = memo(({ id, data }: InputNodeProps) => {
+const InputNodeComponent = ({ id, data }: InputNodeProps) => {
   const [value, setValue] = useState(data.value);
   const { selectedNodeId } = useCampaignStore();
   const isSelected = selectedNodeId === id;
@@ -62,4 +62,8 @@ export const InputNode = memo(({ id, data }: InputNodeProps) => {
     </Card>
     </div>
   );
-});
+};
+
+InputNodeComponent.displayName = 'InputNode';
+
+export const InputNode = memo(InputNodeComponent);

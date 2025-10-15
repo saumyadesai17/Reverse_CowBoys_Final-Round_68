@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -137,7 +136,6 @@ export default function CampaignsPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const router = useRouter();
 
   useEffect(() => {
     const canvas = canvasRef.current;

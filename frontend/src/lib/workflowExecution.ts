@@ -1,15 +1,15 @@
 // Workflow Execution API Service
 
 export interface ExecutionResult {
-  outputs: Record<string, any>;
+  outputs: Record<string, unknown>;
   execution_status: string;
-  generation_metadata?: any;
+  generation_metadata?: Record<string, unknown>;
   error?: string;
 }
 
 export interface ModuleExecutionRequest {
   module_name: string;
-  inputs: Record<string, any>;
+  inputs: Record<string, unknown>;
 }
 
 // Backend API base URL
@@ -21,10 +21,10 @@ export class WorkflowExecutionService {
   static transformConnectedInput(
     targetModule: string, 
     targetInput: string, 
-    sourceValue: any, 
+    sourceValue: unknown, 
     sourceModule: string, 
     sourceOutput: string
-  ): any {
+  ): unknown {
     console.log(`🔄 Transforming connected input: ${sourceModule}.${sourceOutput} → ${targetModule}.${targetInput}`);
     console.log(`📊 Source value type: ${typeof sourceValue}, length: ${Array.isArray(sourceValue) ? sourceValue.length : 'N/A'}`);
     console.log(`📊 Source value preview:`, JSON.stringify(sourceValue).substring(0, 200) + '...');
@@ -184,11 +184,11 @@ export class WorkflowExecutionService {
   }
 
   // Transform module configuration to API request format
-  static transformInputsForAPI(moduleName: string, inputs: Record<string, any>): Record<string, any> {
+  static transformInputsForAPI(moduleName: string, inputs: Record<string, unknown>): Record<string, unknown> {
     switch (moduleName) {
       case 'visual_asset_generator':
         // Ensure colors is always an array
-        const ensureColorsArray = (colors: any): string[] => {
+        const ensureColorsArray = (colors: unknown): string[] => {
           if (!colors) return ["blue", "white"];
           if (Array.isArray(colors)) return colors;
           if (typeof colors === 'string') return [colors];
@@ -196,7 +196,7 @@ export class WorkflowExecutionService {
         };
         
         // Ensure image_style is always an array
-        const ensureImageStyleArray = (style: any): string[] => {
+        const ensureImageStyleArray = (style: unknown): string[] => {
           if (!style) return ["photorealistic"];
           if (Array.isArray(style)) return style;
           if (typeof style === 'string') return [style];
@@ -204,28 +204,31 @@ export class WorkflowExecutionService {
         };
         
         // Ensure negative_prompts is always an array
-        const ensureNegativePromptsArray = (prompts: any): string[] => {
+        const ensureNegativePromptsArray = (prompts: unknown): string[] => {
           if (!prompts) return ["blurry", "low quality"];
           if (Array.isArray(prompts)) return prompts;
           if (typeof prompts === 'string') return [prompts];
           return ["blurry", "low quality"];
         };
         
+        const brandGuidelines = inputs.brand_guidelines as Record<string, unknown> | undefined;
+        const dimensions = inputs.dimensions as Record<string, unknown> | undefined;
+        
         return {
           prompt: inputs.prompt || 'Generate a marketing visual',
-          brand_guidelines: inputs.brand_guidelines ? {
-            colors: ensureColorsArray(inputs.brand_guidelines.colors),
-            style: inputs.brand_guidelines.style || "modern",
-            logo_url: inputs.brand_guidelines.logo_url || null
+          brand_guidelines: brandGuidelines ? {
+            colors: ensureColorsArray(brandGuidelines.colors),
+            style: brandGuidelines.style || "modern",
+            logo_url: brandGuidelines.logo_url || null
           } : {
             colors: ["blue", "white"],
             style: "modern", 
             logo_url: null
           },
           quantity: inputs.quantity || 1,
-          dimensions: inputs.dimensions ? {
-            width: inputs.dimensions.width || 1080,
-            height: inputs.dimensions.height || 1080
+          dimensions: dimensions ? {
+            width: (dimensions.width as number) || 1080,
+            height: (dimensions.height as number) || 1080
           } : {
             width: 1080,
             height: 1080
@@ -236,26 +239,29 @@ export class WorkflowExecutionService {
         
       case 'copy_content_generator':
         // Ensure arrays for required fields
-        const ensureArrayField = (field: any, defaultValue: any[] = []): any[] => {
+        const ensureArrayField = (field: unknown, defaultValue: unknown[] = []): unknown[] => {
           if (!field) return defaultValue;
           if (Array.isArray(field)) return field;
           if (typeof field === 'string') return [field];
           return defaultValue;
         };
         
+        const targetAudience = inputs.target_audience as Record<string, unknown> | undefined;
+        const wordCountRange = inputs.word_count_range as Record<string, unknown> | undefined;
+        
         return {
           content_purpose: ensureArrayField(inputs.content_purpose, ["social_caption"]),
           campaign_brief: inputs.campaign_brief || 'Generate marketing content',
           tone_of_voice: ensureArrayField(inputs.tone_of_voice, ["professional"]),
           target_audience: {
-            product_description: inputs.target_audience?.product_description || "Product description",
-            demographics: inputs.target_audience?.demographics || "General audience", 
-            psychographics: inputs.target_audience?.psychographics || "Value-conscious consumers",
-            pain_points: ensureArrayField(inputs.target_audience?.pain_points, [])
+            product_description: (targetAudience?.product_description as string) || "Product description",
+            demographics: (targetAudience?.demographics as string) || "General audience", 
+            psychographics: (targetAudience?.psychographics as string) || "Value-conscious consumers",
+            pain_points: ensureArrayField(targetAudience?.pain_points, [])
           },
           word_count_range: {
-            min: inputs.word_count_range?.min || 50,
-            max: inputs.word_count_range?.max || 150
+            min: (wordCountRange?.min as number) || 50,
+            max: (wordCountRange?.max as number) || 150
           },
           keywords: ensureArrayField(inputs.keywords, []),
           call_to_action: inputs.call_to_action || "Learn more",
@@ -263,21 +269,24 @@ export class WorkflowExecutionService {
         };
         
       case 'audience_intelligence_analyzer':
+        const geographicLocation = inputs.geographic_location as Record<string, unknown> | undefined;
+        const existingCustomerData = inputs.existing_customer_data as Record<string, unknown> | undefined;
+        
         return {
           product_category: inputs.product_category || 'general',
           geographic_location: {
-            country: inputs.geographic_location?.country || null,
-            city: inputs.geographic_location?.city || null,
-            region: inputs.geographic_location?.region || null
+            country: (geographicLocation?.country as string) || null,
+            city: (geographicLocation?.city as string) || null,
+            region: (geographicLocation?.region as string) || null
           },
           campaign_objective: inputs.campaign_objective || 'brand awareness',
           existing_customer_data: {
-            age_range: inputs.existing_customer_data?.age_range || "18-65",
-            interests: Array.isArray(inputs.existing_customer_data?.interests) 
-              ? inputs.existing_customer_data.interests 
+            age_range: (existingCustomerData?.age_range as string) || "18-65",
+            interests: Array.isArray(existingCustomerData?.interests) 
+              ? existingCustomerData.interests 
               : ["technology", "lifestyle"],
-            behavior_patterns: Array.isArray(inputs.existing_customer_data?.behavior_patterns)
-              ? inputs.existing_customer_data.behavior_patterns
+            behavior_patterns: Array.isArray(existingCustomerData?.behavior_patterns)
+              ? existingCustomerData.behavior_patterns
               : ["social media active"]
           },
           competitor_analysis: inputs.competitor_analysis !== false
@@ -287,39 +296,6 @@ export class WorkflowExecutionService {
         console.log(`🔧 Transforming inputs for campaign_timeline_optimizer:`);
         console.log(`   Raw audience_segments:`, inputs.audience_segments);
         console.log(`   Raw optimal_posting_times:`, inputs.optimal_posting_times);
-        
-        // Ensure audience_segments is array of strings
-        let audienceSegments;
-        if (Array.isArray(inputs.audience_segments)) {
-          audienceSegments = inputs.audience_segments.map(segment => {
-            if (typeof segment === 'string') {
-              return segment;
-            } else if (typeof segment === 'object' && segment.segment_name) {
-              return segment.segment_name;
-            } else {
-              return String(segment);
-            }
-          });
-        } else {
-          audienceSegments = ["General Audience"];
-        }
-        
-        // Ensure optimal_posting_times is a single object
-        let optimalPostingTimes;
-        if (Array.isArray(inputs.optimal_posting_times)) {
-          const firstPlatform = inputs.optimal_posting_times[0];
-          optimalPostingTimes = {
-            platform: firstPlatform?.platform || "LinkedIn",
-            time_slots: firstPlatform?.time_slots || ["09:00", "12:00", "17:00"]
-          };
-        } else if (inputs.optimal_posting_times && typeof inputs.optimal_posting_times === 'object') {
-          optimalPostingTimes = inputs.optimal_posting_times;
-        } else {
-          optimalPostingTimes = {
-            platform: "LinkedIn",
-            time_slots: ["09:00", "12:00", "17:00"]
-          };
-        }
         
         const result = {
           "campaign_duration": {
@@ -416,7 +392,7 @@ export class WorkflowExecutionService {
   }
   
   // Execute a single module
-  static async executeModule(moduleName: string, inputs: Record<string, any>): Promise<ExecutionResult> {
+  static async executeModule(moduleName: string, inputs: Record<string, unknown>): Promise<ExecutionResult> {
     try {
       console.log(`🚀 Executing module: ${moduleName}`, inputs);
       
@@ -462,7 +438,7 @@ export class WorkflowExecutionService {
 
   // Execute workflow sequentially based on connections with strict dependency order
   static async executeWorkflow(
-    nodes: Array<{id: string, data: {module_name: string, inputs: Record<string, any>}}>,
+    nodes: Array<{id: string, data: {module_name: string, inputs: Record<string, unknown>}}>,
     connections: Array<{module_name: string, connections: Array<{target_module: string, source_output: string, target_input: string}>}>,
     onNodeComplete: (nodeId: string, result: ExecutionResult) => void,
     onNodeStart: (nodeId: string) => void
@@ -473,7 +449,7 @@ export class WorkflowExecutionService {
     console.log('🔗 Connections:', connections);
     
     const results: Record<string, ExecutionResult> = {};
-    const moduleOutputs: Record<string, any> = {};
+    const moduleOutputs: Record<string, unknown> = {};
     
     // Create dependency graph and connection mappings
     const dependencies = new Map<string, Set<string>>();
@@ -551,7 +527,7 @@ export class WorkflowExecutionService {
             
             // Process connected inputs (these take priority over inline values)
             for (const conn of connections) {
-              const sourceOutput = moduleOutputs[conn.sourceModule];
+              const sourceOutput = moduleOutputs[conn.sourceModule] as Record<string, unknown> | undefined;
               if (sourceOutput && sourceOutput[conn.sourceOutput] !== undefined) {
                 let connectedValue = sourceOutput[conn.sourceOutput];
                 
