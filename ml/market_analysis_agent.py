@@ -11,7 +11,7 @@ from agno.tools.firecrawl import FirecrawlTools
 import os 
 from dotenv import load_dotenv
 load_dotenv()
-os.environ["GOOGLE_API_KEY"] = "AIzaSyDH984JnVvIFTiWkbFKQ2ySE2iQcPMvB_0"
+os.environ["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY")
 os.environ["EXA_API_KEY"] = os.getenv("EXA_API_KEY")
 
 
